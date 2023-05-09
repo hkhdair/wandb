@@ -11,12 +11,12 @@ def artifact_with_various_paths():
 
     # internal file
     with open("random.txt", "w") as f:
-        f.write("file1 %s" % random.random())
+        f.write(f"file1 {random.random()}")
         f.close()
         art.add_file(f.name)
     # internal file (using new_file)
     with art.new_file("a.txt") as f:
-        f.write("hello %s" % random.random())
+        f.write(f"hello {random.random()}")
     os.makedirs("./dir", exist_ok=True)
     with open("./dir/1.txt", "w") as f:
         f.write("1")

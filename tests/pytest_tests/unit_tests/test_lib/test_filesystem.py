@@ -218,7 +218,7 @@ def test_safe_read_existing_file(tmp_path, binary):
     existing_file.write_text(original_content, encoding="utf-8")
 
     encoding = "utf-8" if binary != "b" else None
-    with safe_open(existing_file, "r" + binary, encoding=encoding) as f:
+    with safe_open(existing_file, f"r{binary}", encoding=encoding) as f:
         content = f.read()
         if binary == "b":
             content = content.decode("utf-8")
@@ -235,7 +235,7 @@ def test_safe_read_write_existing_file(binary):
         new_content = "More❗"
 
         encoding = "utf-8" if binary != "b" else None
-        with safe_open(original_file, "r+" + binary, encoding=encoding) as f:
+        with safe_open(original_file, f"r+{binary}", encoding=encoding) as f:
             content = f.read()
             if binary == "b":
                 content = content.decode("utf-8")
@@ -271,7 +271,7 @@ def test_safe_write_interrupted_exclusive_writes(binary, mode):
                 raise RuntimeError("Interrupted write")
 
         assert not original_file.exists()
-        assert list(tmp_dir.iterdir()) == []
+        assert not list(tmp_dir.iterdir())
 
 
 @pytest.mark.parametrize("binary", ["", "b", "t"])
@@ -406,7 +406,7 @@ def test_safe_copy_target_file_changes_during_copy(tmp_path: Path, monkeypatch):
         future.result()
 
     result_content = target_path.read_text("utf-8")
-    assert result_content == source_content or result_content == changed_target_content
+    assert result_content in [source_content, changed_target_content]
 
 
 @pytest.mark.parametrize("src_link", [None, "symbolic", "hard"])

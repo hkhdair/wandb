@@ -14,19 +14,15 @@ class ArtifactEmulator:
     def create(self, variables):
         collection_name = variables["artifactCollectionNames"][0]
         state = "PENDING"
-        aliases = []
         latest = None
         art_id = variables.get("digest", "")
 
-        # Find most recent artifact
-        versions = self._artifacts.get(collection_name)
-        if versions:
+        if versions := self._artifacts.get(collection_name):
             last_version = versions[-1]
             latest = {"id": last_version["digest"], "versionIndex": len(versions) - 1}
         art_seq = {"id": art_id, "latestArtifact": latest}
 
-        aliases.append(dict(artifactCollectionName=collection_name, alias="latest"))
-
+        aliases = [dict(artifactCollectionName=collection_name, alias="latest")]
         base_url = self._base_url
         direct_url = f"{base_url}/storage?file=wandb_manifest.json"
         art_data = {
@@ -79,12 +75,11 @@ class ArtifactEmulator:
         self._ctx["portfolio_links"].setdefault(pfolio_name, {})
         num = len(links)
         self._ctx["portfolio_links"][pfolio_name]["num"] = num
-        response = {"data": {"linkArtifact": {"versionIndex": num - 1}}}
-        return response
+        return {"data": {"linkArtifact": {"versionIndex": num - 1}}}
 
     def create_files(self, variables):
         base_url = self._base_url
-        response = {
+        return {
             "data": {
                 "createArtifactFiles": {
                     "files": {
@@ -105,7 +100,6 @@ class ArtifactEmulator:
                 },
             },
         }
-        return response
 
     def query(self, variables, query=None):
         public_api_query_str = "query Artifact($id: ID!) {"
@@ -124,27 +118,25 @@ class ArtifactEmulator:
         if art_name:
             collection_name, version = art_name.split(":", 1)
             artifact = None
-            artifacts = self._artifacts.get(collection_name)
-            if artifacts:
+            if artifacts := self._artifacts.get(collection_name):
                 if version == "latest":
                     version_num = len(artifacts)
                 else:
                     assert version.startswith("v")
                     version_num = int(version[1:])
                 artifact = artifacts[version_num - 1]
-                # TODO: add alias info?
         elif art_id:
             artifact = self._artifacts_by_id[art_id]
 
-        if is_public_api_query:
-            response = {"data": {"artifact": artifact}}
-        else:
-            response = {"data": {"project": {"artifact": artifact}}}
-        return response
+        return (
+            {"data": {"artifact": artifact}}
+            if is_public_api_query
+            else {"data": {"project": {"artifact": artifact}}}
+        )
 
     def file(self, entity, digest):
         # TODO?
-        return "ARTIFACT %s" % digest, 200
+        return f"ARTIFACT {digest}", 200
 
     def storage(self, request, arti_id=None):
         fname = request.args.get("file")
@@ -155,7 +147,5 @@ class ArtifactEmulator:
             if self._files.get(arti_id) is None:
                 self._files[arti_id] = {}
             self._files[arti_id][fname] = data
-        data = ""
-        if request.method == "GET":
-            data = self._files[arti_id][fname]
+        data = self._files[arti_id][fname] if request.method == "GET" else ""
         return data, 200

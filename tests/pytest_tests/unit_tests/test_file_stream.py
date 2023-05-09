@@ -39,8 +39,10 @@ def test_split_files():
     num_files = 10
     chunk_size = 0.1  # MB
     files = {
-        "file_%s.txt"
-        % i: {"content": rand_string_list(int(file_size * 1024 * 1024)), "offset": 0}
+        f"file_{i}.txt": {
+            "content": rand_string_list(int(file_size * 1024 * 1024)),
+            "offset": 0,
+        }
         for i in range(num_files)
     }
     chunks = list(split_files(files, max_bytes=chunk_size * 1024 * 1024))
@@ -106,8 +108,6 @@ def test_crdedupe_split_chunk():
 def test_crdedupe_process_chunks():
     fp = CRDedupeFilePolicy()
     sep = os.linesep
-    files = {"output.log": None}
-
     # Test STDERR progress bar updates (\r lines) overwrite the correct offset.
     # Test STDOUT and STDERR normal messages get appended correctly.
     chunks = [
@@ -137,7 +137,7 @@ def test_crdedupe_process_chunks():
     print(f"\n{ret}")
     print(want)
     assert ret == want
-    files["output.log"] = ret
+    files = {"output.log": ret}
     file_requests = list(split_files(files, max_bytes=util.MAX_LINE_BYTES))
     assert 1 == len(file_requests)
 

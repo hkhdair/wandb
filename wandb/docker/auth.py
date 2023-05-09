@@ -61,9 +61,11 @@ def find_config_file(config_path: Optional[str] = None) -> Optional[str]:
 
 def config_path_from_environment() -> Optional[str]:
     config_dir = os.environ.get("DOCKER_CONFIG")
-    if not config_dir:
-        return None
-    return os.path.join(config_dir, os.path.basename(DOCKER_CONFIG_FILENAME))
+    return (
+        os.path.join(config_dir, os.path.basename(DOCKER_CONFIG_FILENAME))
+        if config_dir
+        else None
+    )
 
 
 def home_dir() -> str:
@@ -106,15 +108,14 @@ def resolve_repository_name(repo_name: str) -> Tuple[str, str]:
     index_name, remote_name = split_repo_name(repo_name)
     if index_name[0] == "-" or index_name[-1] == "-":
         raise InvalidRepositoryError(
-            "Invalid index name ({}). Cannot begin or end with a"
-            " hyphen.".format(index_name)
+            f"Invalid index name ({index_name}). Cannot begin or end with a hyphen."
         )
     return resolve_index_name(index_name), remote_name
 
 
 def resolve_index_name(index_name: str) -> str:
     index_name = convert_to_hostname(index_name)
-    if index_name == "index." + INDEX_NAME:
+    if index_name == f"index.{INDEX_NAME}":
         index_name = INDEX_NAME
     return index_name
 
@@ -142,7 +143,7 @@ class AuthConfig(dict):
             dct["auths"] = {}
         self.update(dct)
         self._credstore_env = credstore_env
-        self._stores: Dict[str, "dockerpycreds.Store"] = dict()
+        self._stores: Dict[str, "dockerpycreds.Store"] = {}
 
     @classmethod
     def parse_auth(
@@ -182,17 +183,14 @@ class AuthConfig(dict):
                 # a valid value in the auth's config.
                 # https://github.com/docker/compose/issues/3265
                 log.debug(
-                    "Auth data for {} is absent. Client might be using a "
-                    "credentials store instead.".format(registry)
+                    f"Auth data for {registry} is absent. Client might be using a credentials store instead."
                 )
                 conf[registry] = {}
                 continue
 
             username, password = decode_auth(entry["auth"])
             log.debug(
-                "Found entry (registry={}, username={})".format(
-                    repr(registry), repr(username)
-                )
+                f"Found entry (registry={repr(registry)}, username={repr(username)})"
             )
 
             conf[registry] = {
@@ -238,15 +236,13 @@ class AuthConfig(dict):
         assert isinstance(config_dict, Dict)  # worship mypy
         if config_dict.get("auths"):
             log.debug("Found 'auths' section")
-            res.update(
-                {"auths": cls.parse_auth(config_dict.pop("auths"), raise_on_error=True)}
-            )
+            res["auths"] = cls.parse_auth(config_dict.pop("auths"), raise_on_error=True)
         if config_dict.get("credsStore"):
             log.debug("Found 'credsStore' section")
-            res.update({"credsStore": config_dict.pop("credsStore")})
+            res["credsStore"] = config_dict.pop("credsStore")
         if config_dict.get("credHelpers"):
             log.debug("Found 'credHelpers' section")
-            res.update({"credHelpers": config_dict.pop("credHelpers")})
+            res["credHelpers"] = config_dict.pop("credHelpers")
         if res:
             return cls(res, credstore_env)
 
@@ -323,7 +319,7 @@ class AuthConfig(dict):
             if data["Username"] == TOKEN_USERNAME:
                 res["IdentityToken"] = data["Secret"]
             else:
-                res.update({"Username": data["Username"], "Password": data["Secret"]})
+                res |= {"Username": data["Username"], "Password": data["Secret"]}
             return res
         except (dockerpycreds.CredentialsNotFound, ValueError):
             log.debug("No entry found")
@@ -414,8 +410,7 @@ def _load_legacy_config(
     try:
         data = []
         with open(config_file) as f:
-            for line in f.readlines():
-                data.append(line.strip().split(" = ")[1])
+            data.extend(line.strip().split(" = ")[1] for line in f)
             if len(data) < 2:
                 # Not enough data
                 raise InvalidConfigFileError("Invalid or empty configuration file!")
@@ -433,7 +428,5 @@ def _load_legacy_config(
         }
     except Exception as e:
         log.debug(e)
-        pass
-
     log.debug("All parsing attempts failed - returning empty config")
     return {}

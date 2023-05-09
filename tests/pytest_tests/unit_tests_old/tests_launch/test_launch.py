@@ -235,9 +235,7 @@ def check_project_spec(
         )
     assert project_spec.resource == resource
     if resource_args:
-        assert {(k, v) for k, v in resource_args.items()} == {
-            (k, v) for k, v in project_spec.resource_args.items()
-        }
+        assert set(resource_args.items()) == set(project_spec.resource_args.items())
     if project_spec.source == _project_spec.LaunchSource.WANDB:
         with open(os.path.join(project_spec.project_dir, "patch.txt")) as fp:
             contents = fp.read()
@@ -840,12 +838,12 @@ def test_launch_metadata(
 
 
 def patched_pop_from_queue(self, queue):
-    ups = self._api.pop_from_run_queue(
+    if ups := self._api.pop_from_run_queue(
         queue, entity=self._entity, project=self._project
-    )
-    if not ups:
+    ):
+        return ups
+    else:
         raise KeyboardInterrupt
-    return ups
 
 
 def test_fail_pull_docker_image():
@@ -960,7 +958,7 @@ def test_launch_local_docker_image(live_mock_server, test_settings, monkeypatch)
         "--network",
         "host",
     ]
-    if sys.platform == "linux" or sys.platform == "linux2":
+    if sys.platform in ["linux", "linux2"]:
         expected_command += ["--add-host", "host.docker.internal:host-gateway"]
     expected_command += [image_name]
 

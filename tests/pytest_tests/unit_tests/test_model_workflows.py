@@ -27,5 +27,3 @@ def test_add_any():
 
         with pytest.raises(ValueError):
             _add_any(artifact, ["invalid input type"], "invalid")
-
-    assert True

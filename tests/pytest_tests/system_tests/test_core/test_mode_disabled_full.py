@@ -60,7 +60,7 @@ def test_disabled_ops(wandb_init):
     print(run >= 2)
     print(run != 2)
     print(run)
-    print(str(run))
+    print(run)
     print(repr(run))
     if run:
         print(run)

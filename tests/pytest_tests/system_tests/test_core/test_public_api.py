@@ -137,8 +137,7 @@ def test_update_aliases_on_artifact(user, relay_server, wandb_init):
     )
     aliases = artifact.aliases
     assert "sequence" not in aliases
-    artifact.aliases = ["portfolio"]
-    artifact.aliases.append("boom")
+    artifact.aliases = ["portfolio", "boom"]
     artifact.save()
 
     artifact = Api().artifact(

@@ -65,7 +65,7 @@ def test_get_run_state_invalid_kwargs():
         _api = internal.Api()
 
         def _mock_gql(*args, **kwargs):
-            return dict()
+            return {}
 
         _api.api.gql = _mock_gql
         _api.get_run_state("test_entity", None, "test_run")

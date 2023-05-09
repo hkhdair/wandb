@@ -138,9 +138,7 @@ class WandbCallback(TrackerCallback):
             current = self.get_monitor_value()
             if current is not None and self.operator(current, self.best):
                 print(
-                    "Better model found at epoch {} with {} value: {}.".format(
-                        epoch, self.monitor, current
-                    )
+                    f"Better model found at epoch {epoch} with {self.monitor} value: {current}."
                 )
                 self.best = current
 
@@ -161,22 +159,19 @@ class WandbCallback(TrackerCallback):
 
         # Log losses & metrics
         # Adapted from fast.ai "CSVLogger"
-        logs = {
-            name: stat
-            for name, stat in list(
+        logs = dict(
+            list(
                 zip(self.learn.recorder.names, [epoch, smooth_loss] + last_metrics)
             )
-        }
+        )
         wandb.log(logs)
 
     def on_train_end(self, **kwargs: Any) -> None:
         """Load the best model."""
-        if self.save_model:
-            # Adapted from fast.ai "SaveModelCallback"
-            if self.model_path.is_file():
-                with self.model_path.open("rb") as model_file:
-                    self.learn.load(model_file, purge=False)
-                    print(f"Loaded best saved model from {self.model_path}")
+        if self.save_model and self.model_path.is_file():
+            with self.model_path.open("rb") as model_file:
+                self.learn.load(model_file, purge=False)
+                print(f"Loaded best saved model from {self.model_path}")
 
     def _wandb_log_predictions(self) -> None:
         """Log prediction samples."""
@@ -203,16 +198,15 @@ class WandbCallback(TrackerCallback):
                     )
                 )
 
-            # most vision datasets have a "show" function we can use
             elif hasattr(x, "show"):
                 # log input data
                 pred_log.append(wandb.Image(x.data, caption="Input data", grouping=3))
 
+                # Resize plot to image resolution
+                # from https://stackoverflow.com/a/13714915
+                my_dpi = 100
                 # log label and prediction
                 for im, capt in ((pred[0], "Prediction"), (y, "Ground Truth")):
-                    # Resize plot to image resolution
-                    # from https://stackoverflow.com/a/13714915
-                    my_dpi = 100
                     fig = plt.figure(frameon=False, dpi=my_dpi)
                     h, w = x.size
                     fig.set_size_inches(w / my_dpi, h / my_dpi)
@@ -225,7 +219,6 @@ class WandbCallback(TrackerCallback):
                     pred_log.append(wandb.Image(fig, caption=capt))
                     plt.close(fig)
 
-            # likely to be an image
             elif hasattr(y, "shape") and (
                 (len(y.shape) == 2) or (len(y.shape) == 3 and y.shape[0] in [1, 3, 4])
             ):
@@ -237,7 +230,6 @@ class WandbCallback(TrackerCallback):
                     ]
                 )
 
-            # we just log input data
             else:
                 pred_log.append(wandb.Image(x.data, caption="Input data"))
 

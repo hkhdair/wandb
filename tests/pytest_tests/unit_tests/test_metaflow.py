@@ -161,6 +161,9 @@ def test_track_sklearn_model():
 
 
 def test_track_pytorch_model():
+
+
+
     class Net(nn.Module):
         def __init__(self):
             super().__init__()
@@ -183,8 +186,8 @@ def test_track_pytorch_model():
             x = F.relu(x)
             x = self.dropout2(x)
             x = self.fc2(x)
-            output = F.log_softmax(x, dim=1)
-            return output
+            return F.log_softmax(x, dim=1)
+
 
     model = Net()
     assert wandb_track("model", model, testing=True, models=True) == "nn.Module"
@@ -245,6 +248,8 @@ def test_use_models():
     assert wandb_use("gb_clf", gb_clf, testing=True, models=True) == "models"
     assert wandb_use("gb_clf", gb_clf, testing=True, models=False) is None
 
+
+
     class Net(nn.Module):
         def __init__(self):
             super().__init__()
@@ -267,8 +272,8 @@ def test_use_models():
             x = F.relu(x)
             x = self.dropout2(x)
             x = self.fc2(x)
-            output = F.log_softmax(x, dim=1)
-            return output
+            return F.log_softmax(x, dim=1)
+
 
     model = Net()
     assert wandb_use("model", model, testing=True, models=True) == "models"

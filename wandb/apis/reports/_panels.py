@@ -478,7 +478,7 @@ class BarPlot(Panel):
     @orientation.setter
     def orientation(self, value):
         json_path = self._get_path("orientation")
-        value = True if value == "v" else False
+        value = value == "v"
         nested_set(self, json_path, value)
 
     @property

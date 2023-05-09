@@ -740,14 +740,16 @@ def test_html_styles():
     )
     html = wandb.Html("<html><body><h1>Hello</h1></body></html>")
     assert (
-        html.html == "<html><head>" + pre + "</head><body><h1>Hello</h1></body></html>"
+        html.html
+        == f"<html><head>{pre}</head><body><h1>Hello</h1></body></html>"
     )
     html = wandb.Html("<html><head></head><body><h1>Hello</h1></body></html>")
     assert (
-        html.html == "<html><head>" + pre + "</head><body><h1>Hello</h1></body></html>"
+        html.html
+        == f"<html><head>{pre}</head><body><h1>Hello</h1></body></html>"
     )
     html = wandb.Html("<h1>Hello</h1>")
-    assert html.html == pre + "<h1>Hello</h1>"
+    assert html.html == f"{pre}<h1>Hello</h1>"
     html = wandb.Html("<h1>Hello</h1>", inject=False)
     assert html.html == "<h1>Hello</h1>"
 
@@ -956,7 +958,7 @@ def test_table_iterator(table_data):
         assert row == table_data[ndx]
 
     table = wandb.Table(data=[])
-    assert len([(ndx, row) for ndx, row in table.iterrows()]) == 0
+    assert not list(table.iterrows())
 
 
 def test_table_from_numpy(table_data):
@@ -1073,11 +1075,9 @@ def test_ndarrays_in_tables():
         nda_table.add_data(np.random.randint(255, size=(d + 1, d, c)).tolist())
 
     assert any(
-        [
-            isinstance(t, wandb.data_types._dtypes.NDArrayType)
-            for t in nda_table._column_types.params["type_map"]["ndarray"].params[
-                "allowed_types"
-            ]
+        isinstance(t, wandb.data_types._dtypes.NDArrayType)
+        for t in nda_table._column_types.params["type_map"]["ndarray"].params[
+            "allowed_types"
         ]
     )
 
@@ -1403,14 +1403,12 @@ def test_object3d_label_is_optional(mock_run):
     }
     box_no_label = {"corners": [], "color": [0, 0, 0]}
     wandb.Object3D.from_point_cloud(points=[], boxes=[box_no_label, box_with_label])
-    assert True
 
 
 def test_object3d_score_is_optional(mock_run):
     box_with_score = {"corners": [], "score": 95, "color": [0, 0, 0]}
     box_no_score = {"corners": [], "color": [0, 0, 0]}
     wandb.Object3D.from_point_cloud(points=[], boxes=[box_no_score, box_with_score])
-    assert True
 
 
 ################################################################################
@@ -1450,7 +1448,7 @@ def test_graph():
 
 def test_partitioned_table():
     partition_table = wandb.data_types.PartitionedTable(parts_path="parts")
-    assert len([(ndx, row) for ndx, row in partition_table.iterrows()]) == 0
+    assert not list(partition_table.iterrows())
     assert partition_table == wandb.data_types.PartitionedTable(parts_path="parts")
     assert partition_table != wandb.data_types.PartitionedTable(parts_path="parts2")
 
@@ -1515,7 +1513,7 @@ def test_media_keys_escaped_as_glob_for_publish(mock_run, media):
         ) in run._backend.interface.publish_files.call_args_list
         for g, _ in files_dict["files"]
     ]
-    assert not any(weird_key in g for g in published_globs), published_globs
+    assert all(weird_key not in g for g in published_globs), published_globs
     assert any(glob.escape(weird_key) in g for g in published_globs), published_globs
 
 

@@ -158,12 +158,14 @@ class UploadBlockingMockApi(Mock):
 
     def wait_for_upload(self, timeout: float) -> Optional[Callable[[], None]]:
         with self.mock_upload_started:
-            if not self.mock_upload_started.wait_for(
-                lambda: len(self.mock_upload_file_waiters) > 0,
-                timeout=timeout,
-            ):
-                return None
-            return self.mock_upload_file_waiters.pop()
+            return (
+                self.mock_upload_file_waiters.pop()
+                if self.mock_upload_started.wait_for(
+                    lambda: len(self.mock_upload_file_waiters) > 0,
+                    timeout=timeout,
+                )
+                else None
+            )
 
     def _mock_upload(self, *args, **kwargs):
         ev = threading.Event()

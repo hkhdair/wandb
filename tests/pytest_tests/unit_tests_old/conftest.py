@@ -172,7 +172,7 @@ def start_mock_server(worker_id):
         try:
             print("=" * 40)
             with open(logfname) as f:
-                for logline in f.readlines():
+                for logline in f:
                     print(logline.strip())
             print("=" * 40)
         except Exception as e:
@@ -413,7 +413,7 @@ def wandb_init_run(request, runner, mocker, mock_server):
         args.update(marker.kwargs)
     try:
         mocks_from_args(mocker, args, mock_server)
-        with mock.patch.dict(os.environ, {k: v for k, v in args["env"].items()}):
+        with mock.patch.dict(os.environ, dict(args["env"].items())):
             #  TODO: likely not the right thing to do, we shouldn't be setting this
             wandb._IS_INTERNAL_PROCESS = False
             run = wandb.init(
@@ -583,8 +583,7 @@ def _internal_sender(record_q, internal_result_q, internal_process, internal_mai
 
 @pytest.fixture()
 def _internal_context_keeper():
-    context_keeper = context.ContextKeeper()
-    yield context_keeper
+    yield context.ContextKeeper()
 
 
 @pytest.fixture()
@@ -602,20 +601,18 @@ def internal_sm(
         test_settings.update(
             root_dir=os.getcwd(), source=wandb.sdk.wandb_settings.Source.INIT
         )
-        sm = SendManager(
+        yield SendManager(
             settings=test_settings,
             record_q=internal_sender_q,
             result_q=internal_result_q,
             interface=_internal_sender,
             context_keeper=_internal_context_keeper,
         )
-        yield sm
 
 
 @pytest.fixture()
 def stopped_event():
-    stopped = threading.Event()
-    yield stopped
+    yield threading.Event()
 
 
 @pytest.fixture()
@@ -635,7 +632,7 @@ def internal_hm(
         test_settings.update(
             root_dir=os.getcwd(), source=wandb.sdk.wandb_settings.Source.INIT
         )
-        hm = HandleManager(
+        yield HandleManager(
             settings=test_settings,
             record_q=record_q,
             result_q=internal_result_q,
@@ -644,7 +641,6 @@ def internal_hm(
             interface=_internal_sender,
             context_keeper=_internal_context_keeper,
         )
-        yield hm
 
 
 @pytest.fixture()
@@ -666,7 +662,7 @@ def internal_wm(
         wandb_file = test_settings.sync_file
         run_dir = Path(wandb_file).parent
         os.makedirs(run_dir)
-        wm = WriteManager(
+        yield WriteManager(
             settings=test_settings,
             record_q=internal_writer_q,
             result_q=internal_result_q,
@@ -674,7 +670,6 @@ def internal_wm(
             interface=_internal_sender,
             context_keeper=_internal_context_keeper,
         )
-        yield wm
 
 
 @pytest.fixture()
@@ -919,12 +914,12 @@ class Responses:
 
 @pytest.fixture
 def collect_responses():
-    responses = Responses()
-    yield responses
+    yield Responses()
 
 
 @pytest.fixture
 def mock_tty(monkeypatch):
+
     class WriteThread(threading.Thread):
         def __init__(self, fname):
             threading.Thread.__init__(self)
@@ -947,7 +942,7 @@ def mock_tty(monkeypatch):
             self.add("_DONE_")
 
     with tempfile.TemporaryDirectory() as tmpdir:
-        fds = dict()
+        fds = {}
 
         def setup_fn(input_str):
             fname = os.path.join(tmpdir, "file.txt")

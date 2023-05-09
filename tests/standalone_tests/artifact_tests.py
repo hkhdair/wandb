@@ -34,7 +34,7 @@ def _run_eq(run_a, run_b):
 
 
 def _runs_eq(runs_a, runs_b):
-    return all([_run_eq(run_a, run_b) for run_a, run_b in zip(runs_a, runs_b)])
+    return all(_run_eq(run_a, run_b) for run_a, run_b in zip(runs_a, runs_b))
 
 
 def test_artifact_run_lookup_apis():
@@ -60,19 +60,19 @@ def test_artifact_run_lookup_apis():
 
     # Use both
     run_3 = wandb.init(name=f"{run_name_base}-{get_init_count()}")
-    a1 = run_3.use_artifact(artifact_1_name + ":latest")
+    a1 = run_3.use_artifact(f"{artifact_1_name}:latest")
     assert _runs_eq(a1.used_by(), [run_3])
     assert _run_eq(a1.logged_by(), run_2)
-    a2 = run_3.use_artifact(artifact_2_name + ":latest")
+    a2 = run_3.use_artifact(f"{artifact_2_name}:latest")
     assert _runs_eq(a2.used_by(), [run_3])
     assert _run_eq(a2.logged_by(), run_1)
     run_3.finish()
 
     # Use both
     run_4 = wandb.init(name=f"{run_name_base}-{get_init_count()}")
-    a1 = run_4.use_artifact(artifact_1_name + ":latest")
+    a1 = run_4.use_artifact(f"{artifact_1_name}:latest")
     assert _runs_eq(a1.used_by(), [run_3, run_4])
-    a2 = run_4.use_artifact(artifact_2_name + ":latest")
+    a2 = run_4.use_artifact(f"{artifact_2_name}:latest")
     assert _runs_eq(a2.used_by(), [run_3, run_4])
     run_4.finish()
 
@@ -108,7 +108,7 @@ def test_artifact_creation_with_diff_type():
         assert did_err
 
     with wandb.init(name=f"{run_name_base}-{get_init_count()}") as run:
-        artifact = run.use_artifact(artifact_name + ":latest")
+        artifact = run.use_artifact(f"{artifact_name}:latest")
         # should work
         image = artifact.get("image")
         assert image is not None

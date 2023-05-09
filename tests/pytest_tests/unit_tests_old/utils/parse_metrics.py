@@ -25,8 +25,7 @@ _SAMPLE_METRIC_LIST = [
 def get_step_metric_dict(ml):
     """Get mapping from metric to preferred x-axis."""
     nl = [m["1"] for m in ml]
-    md = {m["1"]: nl[m["5"] - 1] for m in ml if m.get("5")}
-    return md
+    return {m["1"]: nl[m["5"] - 1] for m in ml if m.get("5")}
 
 
 if __name__ == "__main__":

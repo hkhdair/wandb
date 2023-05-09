@@ -427,13 +427,14 @@ class Api:
         self._timeout = timeout if timeout is not None else self._HTTP_TIMEOUT
         self._base_client = Client(
             transport=GraphQLSession(
-                headers={"User-Agent": self.user_agent, "Use-Admin-Privileges": "true"},
+                headers={
+                    "User-Agent": self.user_agent,
+                    "Use-Admin-Privileges": "true",
+                },
                 use_json=True,
-                # this timeout won't apply when the DNS lookup fails. in that case, it will be 60s
-                # https://bugs.python.org/issue22889
                 timeout=self._timeout,
                 auth=("api", self.api_key),
-                url="%s/graphql" % self.settings["base_url"],
+                url=f'{self.settings["base_url"]}/graphql',
             )
         )
         self._client = RetryingClient(self._base_client)
@@ -453,7 +454,7 @@ class Api:
         width: Optional[str] = "readable",
         blocks: Optional["wandb.apis.reports.util.Block"] = None,
     ) -> "wandb.apis.reports.Report":
-        if entity == "":
+        if not entity:
             entity = self.default_entity or ""
         if blocks is None:
             blocks = []
@@ -522,7 +523,7 @@ class Api:
 
     @property
     def user_agent(self):
-        return "W&B Public Client %s" % __version__
+        return f"W&B Public Client {__version__}"
 
     @property
     def api_key(self):
@@ -603,7 +604,7 @@ class Api:
                             "Invalid report path, should be team/project/reports/Name--XXXX"
                         )
                     else:
-                        parts[-1] = "--" + parts[-1]
+                        parts[-1] = f"--{parts[-1]}"
                 name, id = parts[-1].split("--")
                 return BetaReport(
                     self.client,
@@ -621,14 +622,12 @@ class Api:
 
     def _parse_project_path(self, path):
         """Return project and entity for project specified by path."""
-        project = self.settings["project"]
         entity = self.settings["entity"] or self.default_entity
         if path is None:
+            project = self.settings["project"]
             return entity, project
         parts = path.split("/", 1)
-        if len(parts) == 1:
-            return entity, path
-        return parts
+        return (entity, path) if len(parts) == 1 else parts
 
     def _parse_path(self, path):
         """Parse url, filepath, or docker paths.
@@ -670,7 +669,7 @@ class Api:
             return entity, project
         parts = path.split("/")
         if len(parts) > 3:
-            raise ValueError("Invalid artifact path: %s" % path)
+            raise ValueError(f"Invalid artifact path: {path}")
         elif len(parts) == 1:
             return entity, project, path
         elif len(parts) == 2:
@@ -692,10 +691,10 @@ class Api:
         """
         if entity is None:
             entity = self.settings["entity"] or self.default_entity
-            if entity is None:
-                raise ValueError(
-                    "entity must be passed as a parameter, or set in settings"
-                )
+        if entity is None:
+            raise ValueError(
+                "entity must be passed as a parameter, or set in settings"
+            )
         if entity not in self._projects:
             self._projects[entity] = Projects(self.client, entity, per_page=per_page)
         return self._projects[entity]
@@ -719,7 +718,7 @@ class Api:
         Returns:
             A `Reports` object which is an iterable collection of `BetaReport` objects.
         """
-        entity, project, _ = self._parse_path(path + "/fake_run")
+        entity, project, _ = self._parse_path(f"{path}/fake_run")
 
         if name:
             name = urllib.parse.unquote(name)
@@ -767,9 +766,7 @@ class Api:
             return None
         elif len(res["users"]["edges"]) > 1:
             wandb.termwarn(
-                "Found multiple users, returning the first user matching {}".format(
-                    username_or_email
-                )
+                f"Found multiple users, returning the first user matching {username_or_email}"
             )
         return User(self._client, res["users"]["edges"][0]["node"])
 
@@ -852,7 +849,7 @@ class Api:
         """
         entity, project = self._parse_project_path(path)
         filters = filters or {}
-        key = (path or "") + str(filters) + str(order)
+        key = (path or "") + str(filters) + order
         if not self._runs.get(key):
             self._runs[key] = Runs(
                 self.client,
@@ -1073,11 +1070,10 @@ class Paginator:
 
     def __next__(self):
         self.index += 1
+        if len(self.objects) <= self.index and not self._load_page():
+            raise StopIteration
         if len(self.objects) <= self.index:
-            if not self._load_page():
-                raise StopIteration
-            if len(self.objects) <= self.index:
-                raise StopIteration
+            raise StopIteration
         return self.objects[self.index]
 
     next = __next__
@@ -1483,19 +1479,19 @@ class Project(Attrs):
 
     def to_html(self, height=420, hidden=False):
         """Generate HTML containing an iframe displaying this project."""
-        url = self.url + "?jupyter=true"
+        url = f"{self.url}?jupyter=true"
         style = f"border:none;width:100%;height:{height}px;"
         prefix = ""
         if hidden:
             style += "display:none;"
             prefix = ipython.toggle_button("project")
-        return prefix + f"<iframe src={url!r} style={style!r}></iframe>"
+        return f"{prefix}<iframe src={url!r} style={style!r}></iframe>"
 
     def _repr_html_(self) -> str:
         return self.to_html()
 
     def __repr__(self):
-        return "<Project {}>".format("/".join(self.path))
+        return f'<Project {"/".join(self.path)}>'
 
     @normalize_exceptions
     def artifacts_types(self, per_page=50):
@@ -1628,7 +1624,7 @@ class Runs(Paginator):
     def convert_objects(self):
         objs = []
         if self.last_response is None or self.last_response.get("project") is None:
-            raise ValueError("Could not find project %s" % self.project)
+            raise ValueError(f"Could not find project {self.project}")
         for run_response in self.last_response["project"]["runs"]["edges"]:
             run = Run(
                 self.client,
@@ -1823,7 +1819,7 @@ class Run(Attrs):
                 or response.get("project") is None
                 or response["project"].get("run") is None
             ):
-                raise ValueError("Could not find run %s" % self)
+                raise ValueError(f"Could not find run {self}")
             self._attrs = response["project"]["run"]
             self._state = self._attrs["state"]
 
@@ -1857,7 +1853,7 @@ class Run(Attrs):
                 config[key] = value["value"]
             else:
                 config[key] = value
-        config_raw.update(config_user)
+        config_raw |= config_user
         self._attrs["config"] = config_user
         self._attrs["rawconfig"] = config_raw
         return self._attrs
@@ -1948,15 +1944,16 @@ class Run(Attrs):
 
     @property
     def json_config(self):
-        config = {}
-        for k, v in self.config.items():
-            config[k] = {"value": v, "desc": None}
+        config = {k: {"value": v, "desc": None} for k, v in self.config.items()}
         return json.dumps(config)
 
     def _exec(self, query, **kwargs):
         """Execute a query against the cloud backend."""
-        variables = {"entity": self.entity, "project": self.project, "name": self.id}
-        variables.update(kwargs)
+        variables = {
+            "entity": self.entity,
+            "project": self.project,
+            "name": self.id,
+        } | kwargs
         return self.client.execute(query, variable_values=variables)
 
     def _sampled_history(self, keys, x_axis="_step", samples=500):
@@ -2075,8 +2072,7 @@ class Run(Attrs):
         else:
             lines = self._full_history(samples=samples, stream=stream)
         if pandas:
-            pandas = util.get_module("pandas")
-            if pandas:
+            if pandas := util.get_module("pandas"):
                 lines = pandas.DataFrame.from_records(lines)
             else:
                 print("Unable to load pandas, call history with pandas=False")
@@ -2259,19 +2255,19 @@ class Run(Attrs):
 
     def to_html(self, height=420, hidden=False):
         """Generate HTML containing an iframe displaying this run."""
-        url = self.url + "?jupyter=true"
+        url = f"{self.url}?jupyter=true"
         style = f"border:none;width:100%;height:{height}px;"
         prefix = ""
         if hidden:
             style += "display:none;"
             prefix = ipython.toggle_button()
-        return prefix + f"<iframe src={url!r} style={style!r}></iframe>"
+        return f"{prefix}<iframe src={url!r} style={style!r}></iframe>"
 
     def _repr_html_(self) -> str:
         return self.to_html()
 
     def __repr__(self):
-        return "<Run {} ({})>".format("/".join(self.path), self.state)
+        return f'<Run {"/".join(self.path)} ({self.state})>'
 
 
 class QueuedRun:
@@ -2315,8 +2311,7 @@ class QueuedRun:
 
     @property
     def state(self):
-        item = self._get_item()
-        if item:
+        if item := self._get_item():
             return item["state"].lower()
 
         raise ValueError(
@@ -2459,22 +2454,22 @@ class QueuedRun:
         while True:
             # sleep here to hide an ugly warning
             time.sleep(2)
-            item = self._get_item()
-            if item and item["associatedRunId"] is not None:
-                try:
-                    self._run = Run(
-                        self.client,
-                        self._entity,
-                        self.project,
-                        item["associatedRunId"],
-                        None,
-                    )
-                    self._run_id = item["associatedRunId"]
-                    return self._run
-                except ValueError as e:
-                    print(e)
-            elif item:
-                wandb.termlog("Waiting for run to start")
+            if item := self._get_item():
+                if item["associatedRunId"] is not None:
+                    try:
+                        self._run = Run(
+                            self.client,
+                            self._entity,
+                            self.project,
+                            item["associatedRunId"],
+                            None,
+                        )
+                        self._run_id = item["associatedRunId"]
+                        return self._run
+                    except ValueError as e:
+                        print(e)
+                else:
+                    wandb.termlog("Waiting for run to start")
 
             time.sleep(3)
 
@@ -2562,7 +2557,7 @@ class Sweep(Attrs):
         if force or not self._attrs:
             sweep = self.get(self.client, self.entity, self.project, self.id)
             if sweep is None:
-                raise ValueError("Could not find sweep %s" % self)
+                raise ValueError(f"Could not find sweep {self}")
             self._attrs = sweep._attrs
             self.runs = sweep.runs
 
@@ -2579,16 +2574,13 @@ class Sweep(Attrs):
 
     def best_run(self, order=None):
         """Return the best run sorted by the metric defined in config or the order passed in."""
-        if order is None:
-            order = self.order
-        else:
-            order = QueryGenerator.format_order_key(order)
+        order = self.order if order is None else QueryGenerator.format_order_key(order)
         if order is None:
             wandb.termwarn(
                 "No order specified and couldn't find metric in sweep config, returning most recent run"
             )
         else:
-            wandb.termlog("Sorting runs by %s" % order)
+            wandb.termlog(f"Sorting runs by {order}")
         filters = {"$and": [{"sweep": self.id}]}
         try:
             return Runs(
@@ -2644,9 +2636,7 @@ class Sweep(Attrs):
             "entity": entity,
             "project": project,
             "name": sid,
-        }
-        variables.update(kwargs)
-
+        } | kwargs
         response = None
         try:
             response = client.execute(query, variable_values=variables)
@@ -2678,21 +2668,19 @@ class Sweep(Attrs):
 
     def to_html(self, height=420, hidden=False):
         """Generate HTML containing an iframe displaying this sweep."""
-        url = self.url + "?jupyter=true"
+        url = f"{self.url}?jupyter=true"
         style = f"border:none;width:100%;height:{height}px;"
         prefix = ""
         if hidden:
             style += "display:none;"
             prefix = ipython.toggle_button("sweep")
-        return prefix + f"<iframe src={url!r} style={style!r}></iframe>"
+        return f"{prefix}<iframe src={url!r} style={style!r}></iframe>"
 
     def _repr_html_(self) -> str:
         return self.to_html()
 
     def __repr__(self):
-        return "<Sweep {} ({})>".format(
-            "/".join(self.path), self._attrs.get("state", "Unknown State")
-        )
+        return f'<Sweep {"/".join(self.path)} ({self._attrs.get("state", "Unknown State")})>'
 
 
 class Files(Paginator):
@@ -2758,7 +2746,7 @@ class Files(Paginator):
         ]
 
     def __repr__(self):
-        return "<Files {} ({})>".format("/".join(self.run.path), len(self))
+        return f'<Files {"/".join(self.run.path)} ({len(self)})>'
 
 
 class File(Attrs):
@@ -2783,9 +2771,7 @@ class File(Attrs):
     @property
     def size(self):
         size_bytes = self._attrs["sizeBytes"]
-        if size_bytes is not None:
-            return int(size_bytes)
-        return 0
+        return int(size_bytes) if size_bytes is not None else 0
 
     @normalize_exceptions
     @retry.retriable(
@@ -2892,10 +2878,7 @@ class Reports(Paginator):
     @property
     def length(self):
         # TODO: Add the count the backend
-        if self.last_response:
-            return len(self.objects)
-        else:
-            return None
+        return len(self.objects) if self.last_response else None
 
     @property
     def more(self):
@@ -2932,7 +2915,7 @@ class Reports(Paginator):
         ]
 
     def __repr__(self):
-        return "<Reports {}>".format("/".join(self.project.path))
+        return f'<Reports {"/".join(self.project.path)}>'
 
 
 class QueryGenerator:
@@ -2967,8 +2950,7 @@ class QueryGenerator:
         if len(parts) == 1:
             # Assume the user meant summary_metrics if not a run column
             if parts[0] not in ["createdAt", "updatedAt", "name", "sweep"]:
-                return direction + "summary_metrics." + parts[0]
-        # Assume summary metrics if prefix isn't known
+                return f"{direction}summary_metrics.{parts[0]}"
         elif parts[0] not in ["config", "summary_metrics", "tags"]:
             return direction + ".".join(["summary_metrics"] + parts)
         else:
@@ -2981,10 +2963,7 @@ class QueryGenerator:
         return op.get("key") is not None
 
     def _to_mongo_op_value(self, op, value):
-        if op == "=":
-            return value
-        else:
-            return {self.INDIVIDUAL_OP_TO_MONGO[op]: value}
+        return value if op == "=" else {self.INDIVIDUAL_OP_TO_MONGO[op]: value}
 
     def key_to_server_path(self, key):
         if key["section"] == "config":
@@ -2997,7 +2976,7 @@ class QueryGenerator:
             return key["name"]
         elif key["section"] == "tags":
             return "tags." + key["name"]
-        raise ValueError("Invalid key: %s" % key)
+        raise ValueError(f"Invalid key: {key}")
 
     def server_path_to_key(self, path):
         if path.startswith("config."):
@@ -3015,10 +2994,7 @@ class QueryGenerator:
         orders = []
         for key in keys["keys"]:
             order = self.key_to_server_path(key["key"])
-            if key.get("ascending"):
-                order = "+" + order
-            else:
-                order = "-" + order
+            order = f"+{order}" if key.get("ascending") else f"-{order}"
             orders.append(order)
         # return ",".join(orders)
         return orders
@@ -3078,29 +3054,24 @@ class QueryGenerator:
         if filter is None:
             return None  # this covers the case where self.filter_to_mongo returns None.
 
-        group_op = None
-        for key in filter.keys():
-            # if self.MONGO_TO_GROUP_OP[key]:
-            if key in self.MONGO_TO_GROUP_OP:
-                group_op = key
-                break
+        group_op = next(
+            (key for key in filter.keys() if key in self.MONGO_TO_GROUP_OP), None
+        )
         if group_op is not None:
             return {
                 "op": self.MONGO_TO_GROUP_OP[group_op],
                 "filters": [self.mongo_to_filter(f) for f in filter[group_op]],
             }
-        else:
-            for k, v in filter.items():
-                if isinstance(v, dict):
-                    # TODO: do we always have one key in this case?
-                    op = next(iter(v.keys()))
-                    return {
-                        "key": self.server_path_to_key(k),
-                        "op": self.MONGO_TO_INDIVIDUAL_OP[op],
-                        "value": v[op],
-                    }
-                else:
-                    return {"key": self.server_path_to_key(k), "op": "=", "value": v}
+        for k, v in filter.items():
+            if not isinstance(v, dict):
+                return {"key": self.server_path_to_key(k), "op": "=", "value": v}
+            # TODO: do we always have one key in this case?
+            op = next(iter(v.keys()))
+            return {
+                "key": self.server_path_to_key(k),
+                "op": self.MONGO_TO_INDIVIDUAL_OP[op],
+                "value": v[op],
+            }
 
 
 class PythonMongoishQueryGenerator:
@@ -3173,10 +3144,7 @@ class PythonMongoishQueryGenerator:
         right = self._handle_fields(node.comparators[0])
 
         # Eq has no op for some reason
-        if op == "=":
-            return {left: right}
-        else:
-            return {left: {op: right}}
+        return {left: right} if op == "=" else {left: {op: right}}
 
     def _handle_fields(self, node):
         result = getattr(node, self.AST_FIELDS.get(type(node)))
@@ -3190,18 +3158,19 @@ class PythonMongoishQueryGenerator:
         return self.AST_OPERATORS.get(type(node))
 
     def _replace_numeric_dots(self, s):
-        numeric_dots = []
-        for i, (left, mid, right) in enumerate(zip(s, s[1:], s[2:]), 1):
-            if mid == ".":
-                if (
-                    left.isdigit()
-                    and right.isdigit()  # 1.2
-                    or left.isdigit()
-                    and right == " "  # 1.
-                    or left == " "
-                    and right.isdigit()  # .2
-                ):
-                    numeric_dots.append(i)
+        numeric_dots = [
+            i
+            for i, (left, mid, right) in enumerate(zip(s, s[1:], s[2:]), 1)
+            if mid == "."
+            and (
+                left.isdigit()
+                and right.isdigit()  # 1.2
+                or left.isdigit()
+                and right == " "  # 1.
+                or left == " "
+                and right.isdigit()  # .2
+            )
+        ]
         # Edge: Catch number ending in dot at end of string
         if s[-2].isdigit() and s[-1] == ".":
             numeric_dots.append(len(s) - 1)
@@ -3209,8 +3178,7 @@ class PythonMongoishQueryGenerator:
 
         substrs = []
         for start, stop in zip(numeric_dots, numeric_dots[1:]):
-            substrs.append(s[start + 1 : stop])
-            substrs.append(self.DECIMAL_SPACER)
+            substrs.extend((s[start + 1 : stop], self.DECIMAL_SPACER))
         substrs = substrs[:-1]
         return "".join(substrs)
 
@@ -3220,7 +3188,7 @@ class PythonMongoishQueryGenerator:
             .replace(".", self.SPACER)  # Allow dotted fields
             .replace(self.DECIMAL_SPACER, ".")  # add them back
         )
-        return "(" + _conversion + ")"
+        return f"({_conversion})"
 
     def _unconvert(self, field_name):
         return field_name.replace(self.SPACER, ".")  # Allow dotted fields
@@ -3278,7 +3246,7 @@ class PythonMongoishQueryGenerator:
         if name is None:
             return None
         elif name in self.panel_metrics_helper.FRONTEND_NAME_MAPPING:
-            return "summary:" + self.panel_metrics_helper.FRONTEND_NAME_MAPPING[name]
+            return f"summary:{self.panel_metrics_helper.FRONTEND_NAME_MAPPING[name]}"
         elif name in self.FRONTEND_NAME_MAPPING:
             return self.FRONTEND_NAME_MAPPING[name]
         elif name in self.FRONTEND_NAME_MAPPING_REVERSED:
@@ -3349,12 +3317,10 @@ class PanelMetricsHelper:
 
         name = name + rest
         if name in self.RUN_MAPPING:
-            return "run:" + self.RUN_MAPPING[name]
+            return f"run:{self.RUN_MAPPING[name]}"
         if name in self.FRONTEND_NAME_MAPPING:
-            return "summary:" + self.FRONTEND_NAME_MAPPING[name]
-        if name == "Index":
-            return name
-        return "summary:" + name
+            return f"summary:{self.FRONTEND_NAME_MAPPING[name]}"
+        return name if name == "Index" else f"summary:{name}"
 
     def special_back_to_front(self, name):
         if name is not None:
@@ -3415,10 +3381,7 @@ class BetaReport(Attrs):
         run_set_idx = section.get("openRunSet", 0)
         run_set = section["runSets"][run_set_idx]
         order = self.query_generator.key_to_server_path(run_set["sort"]["key"])
-        if run_set["sort"].get("ascending"):
-            order = "+" + order
-        else:
-            order = "-" + order
+        order = f"+{order}" if run_set["sort"].get("ascending") else f"-{order}"
         filters = self.query_generator.filter_to_mongo(run_set["filters"])
         if only_selected:
             # TODO: handle this not always existing
@@ -3456,13 +3419,13 @@ class BetaReport(Attrs):
 
     def to_html(self, height=1024, hidden=False):
         """Generate HTML containing an iframe displaying this report."""
-        url = self.url + "?jupyter=true"
+        url = f"{self.url}?jupyter=true"
         style = f"border:none;width:100%;height:{height}px;"
         prefix = ""
         if hidden:
             style += "display:none;"
             prefix = ipython.toggle_button("report")
-        return prefix + f"<iframe src={url!r} style={style!r}></iframe>"
+        return f"{prefix}<iframe src={url!r} style={style!r}></iframe>"
 
     def _repr_html_(self) -> str:
         return self.to_html()
@@ -3516,8 +3479,7 @@ class HistoryScan:
     )
     def _load_next(self):
         max_step = self.page_offset + self.page_size
-        if max_step > self.max_step:
-            max_step = self.max_step
+        max_step = min(max_step, self.max_step)
         variables = {
             "entity": self.run.entity,
             "project": self.run.project,
@@ -3583,8 +3545,7 @@ class SampledHistoryScan:
     )
     def _load_next(self):
         max_step = self.page_offset + self.page_size
-        if max_step > self.max_step:
-            max_step = self.max_step
+        max_step = min(max_step, self.max_step)
         variables = {
             "entity": self.run.entity,
             "project": self.run.project,
@@ -3921,9 +3882,7 @@ class RunArtifacts(Paginator):
                 self.client,
                 self.run.entity,
                 self.run.project,
-                "{}:v{}".format(
-                    r["node"]["artifactSequence"]["name"], r["node"]["versionIndex"]
-                ),
+                f'{r["node"]["artifactSequence"]["name"]}:v{r["node"]["versionIndex"]}',
                 r["node"],
             )
             for r in self.last_response["project"]["run"][self.run_key]["edges"]
@@ -3979,7 +3938,7 @@ class ArtifactType:
             or response.get("project") is None
             or response["project"].get("artifactType") is None
         ):
-            raise ValueError("Could not find artifact type %s" % self.type)
+            raise ValueError(f"Could not find artifact type {self.type}")
         self._attrs = response["project"]["artifactType"]
         return self._attrs
 
@@ -4102,7 +4061,7 @@ class ArtifactCollection:
             or response["project"].get("artifactType") is None
             or response["project"]["artifactType"].get("artifactCollection") is None
         ):
-            raise ValueError("Could not find artifact type %s" % self.type)
+            raise ValueError(f"Could not find artifact type {self.type}")
         self._attrs = response["project"]["artifactType"]["artifactCollection"]
         return self._attrs
 
@@ -4380,7 +4339,7 @@ class Artifact(artifacts.Artifact):
             if not re.match(r"^v\d+$", a["alias"])
             and a["artifactCollectionName"] == self._artifact_collection_name
         ]
-        self._frozen_aliases = [a for a in self._aliases]
+        self._frozen_aliases = list(self._aliases)
         self._manifest = None
         self._is_downloaded = False
         self._dependent_artifacts = []
@@ -4409,14 +4368,15 @@ class Artifact(artifacts.Artifact):
 
         A string with the format "v{number}".
         """
-        for a in self._attrs["aliases"]:
-            if a[
-                "artifactCollectionName"
-            ] == self._artifact_collection_name and util.alias_is_version_index(
+        return next(
+            (
                 a["alias"]
-            ):
-                return a["alias"]
-        return None
+                for a in self._attrs["aliases"]
+                if a["artifactCollectionName"] == self._artifact_collection_name
+                and util.alias_is_version_index(a["alias"])
+            ),
+            None,
+        )
 
     @property
     def entity(self):
@@ -4496,9 +4456,7 @@ class Artifact(artifacts.Artifact):
     def aliases(self, aliases):
         for alias in aliases:
             if any(char in alias for char in ["/", ":"]):
-                raise ValueError(
-                    'Invalid alias "%s", slashes and colons are disallowed' % alias
-                )
+                raise ValueError(f'Invalid alias "{alias}", slashes and colons are disallowed')
         self._aliases = aliases
 
     @staticmethod
@@ -4663,10 +4621,16 @@ class Artifact(artifacts.Artifact):
         """Convert a local file path to a path entry in the artifact."""
         abs_file_path = os.path.abspath(file_path)
         abs_file_parts = abs_file_path.split(os.sep)
-        for i in range(len(abs_file_parts) + 1):
-            if self._is_download_root(os.path.join(os.sep, *abs_file_parts[:i])):
-                return os.path.join(*abs_file_parts[i:])
-        return None
+        return next(
+            (
+                os.path.join(*abs_file_parts[i:])
+                for i in range(len(abs_file_parts) + 1)
+                if self._is_download_root(
+                    os.path.join(os.sep, *abs_file_parts[:i])
+                )
+            ),
+            None,
+        )
 
     def _get_obj_entry(self, name):
         """Return an object entry by name, handling any type suffixes.
@@ -4695,7 +4659,7 @@ class Artifact(artifacts.Artifact):
         manifest = self._load_manifest()
         entry = manifest.entries.get(name) or self._get_obj_entry(name)[0]
         if entry is None:
-            raise KeyError("Path not contained in artifact: %s" % name)
+            raise KeyError(f"Path not contained in artifact: {name}")
 
         return _DownloadedArtifactEntry(entry, self)
 
@@ -4801,19 +4765,17 @@ class Artifact(artifacts.Artifact):
                     self.get_path(artifact_path)
                 except KeyError:
                     raise ValueError(
-                        "Found file {} which is not a member of artifact {}".format(
-                            full_path, self.name
-                        )
+                        f"Found file {full_path} which is not a member of artifact {self.name}"
                     )
 
         for entry in manifest.entries.values():
             if entry.ref is None:
                 if md5_file_b64(os.path.join(dirpath, entry.path)) != entry.digest:
-                    raise ValueError("Digest mismatch for file: %s" % entry.path)
+                    raise ValueError(f"Digest mismatch for file: {entry.path}")
             else:
                 ref_count += 1
         if ref_count > 0:
-            print("Warning: skipped verification of %s refs" % ref_count)
+            print(f"Warning: skipped verification of {ref_count} refs")
 
     def file(self, root=None):
         """Download a single file artifact to dir specified by the root.
@@ -4895,20 +4857,17 @@ class Artifact(artifacts.Artifact):
         )
         res = self.client.execute(introspect_query)
         valid = res.get("AddAliasesInputInfoType")
-        aliases = None
-        if not valid:
-            # If valid, wandb backend version >= 0.13.0.
-            # This means we can safely remove aliases from this updateArtifact request since we'll be calling
-            # the alias endpoints below in _save_alias_changes.
-            # If not valid, wandb backend version < 0.13.0. This requires aliases to be sent in updateArtifact.
-            aliases = [
+        aliases = (
+            None
+            if valid
+            else [
                 {
                     "artifactCollectionName": self._artifact_collection_name,
                     "alias": alias,
                 }
                 for alias in self._aliases
             ]
-
+        )
         self.client.execute(
             mutation,
             variable_values={
@@ -5195,17 +5154,17 @@ class Artifact(artifacts.Artifact):
             query,
             variable_values={"id": self.id},
         )
-        # yes, "name" is actually id
-        runs = [
+        return [
             Run(
                 self.client,
                 edge["node"]["project"]["entityName"],
                 edge["node"]["project"]["name"],
                 edge["node"]["name"],
             )
-            for edge in response.get("artifact", {}).get("usedBy", {}).get("edges", [])
+            for edge in response.get("artifact", {})
+            .get("usedBy", {})
+            .get("edges", [])
         ]
-        return runs
 
     def logged_by(self):
         """Retrieve the run which logged this artifact.
@@ -5347,7 +5306,7 @@ class ArtifactVersions(Paginator):
                 self.client,
                 self.entity,
                 self.project,
-                self.collection_name + ":" + a["version"],
+                f"{self.collection_name}:" + a["version"],
                 a["node"],
             )
             for a in self.last_response["project"]["artifactType"][
@@ -5440,7 +5399,7 @@ class ArtifactFiles(Paginator):
         ]
 
     def __repr__(self):
-        return "<ArtifactFiles {} ({})>".format("/".join(self.path), len(self))
+        return f'<ArtifactFiles {"/".join(self.path)} ({len(self)})>'
 
 
 class Job:
@@ -5552,13 +5511,13 @@ class Job:
                     raise ValueError("Cannot queue jobs with unlogged artifacts")
                 run_config[key] = util.artifact_to_json(item)
 
-        run_config.update(config)
+        run_config |= config
 
         assigned_config_type = self._input_types.assign(run_config)
         if isinstance(assigned_config_type, InvalidType):
             raise TypeError(self._input_types.explain(run_config))
 
-        queued_run = launch_add.launch_add(
+        return launch_add.launch_add(
             job=self._name,
             config={"overrides": {"run_config": run_config}},
             project=project or self._project,
@@ -5568,4 +5527,3 @@ class Job:
             project_queue=project_queue,
             resource_args=resource_args,
         )
-        return queued_run

@@ -35,10 +35,7 @@ def _can_compute_flops() -> bool:
     """
     from pkg_resources import parse_version
 
-    if parse_version(tf.__version__) >= parse_version("2.0.0"):
-        return True
-
-    return False
+    return parse_version(tf.__version__) >= parse_version("2.0.0")
 
 
 if "keras" in sys.modules:
@@ -65,8 +62,9 @@ def is_generator_like(data):
     # Checks if data is a generator, Sequence, or Iterator.
 
     types = (tf.keras.utils.Sequence,)
-    iterator_ops = wandb.util.get_module("tensorflow.python.data.ops.iterator_ops")
-    if iterator_ops:
+    if iterator_ops := wandb.util.get_module(
+        "tensorflow.python.data.ops.iterator_ops"
+    ):
         types = types + (iterator_ops.Iterator,)
         # EagerIterator was in tensorflow < 2
         if hasattr(iterator_ops, "EagerIterator"):
@@ -127,25 +125,26 @@ def patch_tf_keras():
     old_generator = training_generator.fit_generator
 
     def set_wandb_attrs(cbk, val_data):
-        if isinstance(cbk, WandbCallback):
-            if is_generator_like(val_data):
-                cbk.generator = val_data
-            elif is_dataset(val_data):
-                if context.executing_eagerly():
-                    cbk.generator = iter(val_data)
-                else:
-                    wandb.termwarn(
-                        "Found a validation dataset in graph mode, can't patch Keras."
-                    )
-            elif isinstance(val_data, tuple) and isinstance(val_data[0], tf.Tensor):
-                # Graph mode dataset generator
-                def gen():
-                    while True:
-                        yield K.get_session().run(val_data)
-
-                cbk.generator = gen()
+        if not isinstance(cbk, WandbCallback):
+            return
+        if is_generator_like(val_data):
+            cbk.generator = val_data
+        elif is_dataset(val_data):
+            if context.executing_eagerly():
+                cbk.generator = iter(val_data)
             else:
-                cbk.validation_data = val_data
+                wandb.termwarn(
+                    "Found a validation dataset in graph mode, can't patch Keras."
+                )
+        elif isinstance(val_data, tuple) and isinstance(val_data[0], tf.Tensor):
+            # Graph mode dataset generator
+            def gen():
+                while True:
+                    yield K.get_session().run(val_data)
+
+            cbk.generator = gen()
+        else:
+            cbk.validation_data = val_data
 
     def new_arrays(*args, **kwargs):
         cbks = kwargs.get("callbacks", [])
@@ -237,12 +236,11 @@ patch_tf_keras()
 def _get_custom_optimizer_parent_class():
     from pkg_resources import parse_version
 
-    if parse_version(tf.__version__) >= parse_version("2.9.0"):
-        custom_optimizer_parent_class = tf.keras.optimizers.legacy.Optimizer
-    else:
-        custom_optimizer_parent_class = tf.keras.optimizers.Optimizer
-
-    return custom_optimizer_parent_class
+    return (
+        tf.keras.optimizers.legacy.Optimizer
+        if parse_version(tf.__version__) >= parse_version("2.9.0")
+        else tf.keras.optimizers.Optimizer
+    )
 
 
 _custom_optimizer_parent_class = _get_custom_optimizer_parent_class()
@@ -507,13 +505,12 @@ class WandbCallback(tf.keras.callbacks.Callback):
         elif mode == "max":
             self.monitor_op = operator.gt
             self.best = float("-inf")
+        elif "acc" in self.monitor or self.monitor.startswith("fmeasure"):
+            self.monitor_op = operator.gt
+            self.best = float("-inf")
         else:
-            if "acc" in self.monitor or self.monitor.startswith("fmeasure"):
-                self.monitor_op = operator.gt
-                self.best = float("-inf")
-            else:
-                self.monitor_op = operator.lt
-                self.best = float("inf")
+            self.monitor_op = operator.lt
+            self.best = float("inf")
         # Get the previous best metric for resumed runs
         previous_best = wandb.run.summary.get(f"{self.log_best_prefix}{self.monitor}")
         if previous_best is not None:
@@ -576,7 +573,7 @@ class WandbCallback(tf.keras.callbacks.Callback):
                     )
                     self._model_trained_since_last_eval = False
             except Exception as e:
-                wandb.termwarn("Error durring prediction logging for epoch: " + str(e))
+                wandb.termwarn(f"Error durring prediction logging for epoch: {str(e)}")
 
     def on_epoch_end(self, epoch, logs={}):
         if self.log_weights:
@@ -617,7 +614,7 @@ class WandbCallback(tf.keras.callbacks.Callback):
                 wandb.run.summary[
                     f"{self.log_best_prefix}{self.monitor}"
                 ] = self.current
-                wandb.run.summary["{}{}".format(self.log_best_prefix, "epoch")] = epoch
+                wandb.run.summary[f"{self.log_best_prefix}epoch"] = epoch
                 if self.verbose and not self.save_model:
                     print(
                         "Epoch %05d: %s improved from %0.5f to %0.5f"
@@ -684,15 +681,16 @@ class WandbCallback(tf.keras.callbacks.Callback):
                     else:
                         x = None
                         y_true = None
-                        for i in range(self.validation_steps):
+                        for _ in range(self.validation_steps):
                             bx, by_true = next(self.generator)
-                            if x is None:
-                                x, y_true = bx, by_true
-                            else:
-                                x, y_true = (
+                            x, y_true = (
+                                (bx, by_true)
+                                if x is None
+                                else (
                                     np.append(x, bx, axis=0),
                                     np.append(y_true, by_true, axis=0),
                                 )
+                            )
                         validation_data = (x, y_true)
                 else:
                     wandb.termwarn(
@@ -758,7 +756,7 @@ class WandbCallback(tf.keras.callbacks.Callback):
                 # User has named true and false
                 captions = [
                     self.labels[1] if logits[0] > 0.5 else self.labels[0]
-                    for logit in logits
+                    for _ in logits
                 ]
             else:
                 if len(self.labels) != 0:
@@ -793,8 +791,7 @@ class WandbCallback(tf.keras.callbacks.Callback):
             if self.class_colors is not None
             else np.array(wandb.util.class_colors(masks[0].shape[2]))
         )
-        imgs = class_colors[np.argmax(masks, axis=-1)]
-        return imgs
+        return class_colors[np.argmax(masks, axis=-1)]
 
     def _log_images(self, num_images=36):
         validation_X = self.validation_data[0]
@@ -874,16 +871,9 @@ class WandbCallback(tf.keras.callbacks.Callback):
                     if self.output_type == "segmentation_mask"
                     else test_output
                 )
-                input_images = [
-                    wandb.Image(data, grouping=3)
-                    for i, data in enumerate(input_image_data)
-                ]
-                output_images = [
-                    wandb.Image(data) for i, data in enumerate(output_image_data)
-                ]
-                reference_images = [
-                    wandb.Image(data) for i, data in enumerate(reference_image_data)
-                ]
+                input_images = [wandb.Image(data, grouping=3) for data in input_image_data]
+                output_images = [wandb.Image(data) for data in output_image_data]
+                reference_images = [wandb.Image(data) for data in reference_image_data]
                 return list(
                     chain.from_iterable(
                         zip(input_images, output_images, reference_images)
@@ -904,13 +894,8 @@ class WandbCallback(tf.keras.callbacks.Callback):
                 if self.output_type == "segmentation_mask"
                 else test_output
             )
-            output_images = [
-                wandb.Image(data, grouping=2)
-                for i, data in enumerate(output_image_data)
-            ]
-            reference_images = [
-                wandb.Image(data) for i, data in enumerate(reference_image_data)
-            ]
+            output_images = [wandb.Image(data, grouping=2) for data in output_image_data]
+            reference_images = [wandb.Image(data) for data in reference_image_data]
             return list(chain.from_iterable(zip(output_images, reference_images)))
 
     def _log_weights(self):
@@ -918,16 +903,10 @@ class WandbCallback(tf.keras.callbacks.Callback):
         for layer in self.model.layers:
             weights = layer.get_weights()
             if len(weights) == 1:
-                _update_if_numeric(
-                    metrics, "parameters/" + layer.name + ".weights", weights[0]
-                )
+                _update_if_numeric(metrics, f"parameters/{layer.name}.weights", weights[0])
             elif len(weights) == 2:
-                _update_if_numeric(
-                    metrics, "parameters/" + layer.name + ".weights", weights[0]
-                )
-                _update_if_numeric(
-                    metrics, "parameters/" + layer.name + ".bias", weights[1]
-                )
+                _update_if_numeric(metrics, f"parameters/{layer.name}.weights", weights[0])
+                _update_if_numeric(metrics, f"parameters/{layer.name}.bias", weights[1])
         return metrics
 
     def _log_gradients(self):
@@ -944,12 +923,12 @@ class WandbCallback(tf.keras.callbacks.Callback):
         tf_logger.setLevel(og_level)
         weights = self.model.trainable_weights
         grads = self._grad_accumulator_callback.grads
-        metrics = {}
-        for weight, grad in zip(weights, grads):
-            metrics[
-                "gradients/" + weight.name.split(":")[0] + ".gradient"
-            ] = wandb.Histogram(grad)
-        return metrics
+        return {
+            "gradients/"
+            + weight.name.split(":")[0]
+            + ".gradient": wandb.Histogram(grad)
+            for weight, grad in zip(weights, grads)
+        }
 
     def _log_dataframe(self):
         x, y_true, y_pred = None, None, None
@@ -965,18 +944,18 @@ class WandbCallback(tf.keras.callbacks.Callback):
                 )
                 return None
 
-            for i in range(self.validation_steps):
+            for _ in range(self.validation_steps):
                 bx, by_true = next(self.generator)
                 by_pred = self.model.predict(bx)
-                if x is None:
-                    x, y_true, y_pred = bx, by_true, by_pred
-                else:
-                    x, y_true, y_pred = (
+                x, y_true, y_pred = (
+                    (bx, by_true, by_pred)
+                    if x is None
+                    else (
                         np.append(x, bx, axis=0),
                         np.append(y_true, by_true, axis=0),
                         np.append(y_pred, by_pred, axis=0),
                     )
-
+                )
         if self.input_type in ("image", "images") and self.output_type == "label":
             return wandb.image_categorizer_dataframe(
                 x=x, y_true=y_true, y_pred=y_pred, labels=self.labels
@@ -994,8 +973,7 @@ class WandbCallback(tf.keras.callbacks.Callback):
             )
         else:
             wandb.termwarn(
-                "unknown dataframe type for input_type=%s and output_type=%s"
-                % (self.input_type, self.output_type)
+                f"unknown dataframe type for input_type={self.input_type} and output_type={self.output_type}"
             )
             return None
 

@@ -12,14 +12,14 @@ def mock_require(mocker):
         cleanup.append(require)
         mocker.patch.object(
             wandb.wandb_sdk.wandb_require._Requires,
-            "require_" + require,
+            f"require_{require}",
             func,
             create=True,
         )
 
     yield fn
     for require in cleanup:
-        wandb.__dict__.pop("require_" + require, None)
+        wandb.__dict__.pop(f"require_{require}", None)
 
 
 def test_require_single(capsys):

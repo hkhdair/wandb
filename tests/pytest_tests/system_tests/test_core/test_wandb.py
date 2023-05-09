@@ -74,7 +74,7 @@ def test_wandb_init_fixture_args(wandb_init):
 
 def test_sagemaker_key():
     with open("secrets.env", "w") as f:
-        f.write("WANDB_API_KEY={}".format("S" * 40))
+        f.write(f'WANDB_API_KEY={"S" * 40}')
     assert wandb.api.api_key == "S" * 40
 
 
@@ -144,14 +144,14 @@ def test_custom_dir(wandb_init):
         run = wandb_init(dir=tmpdir, mode="offline")
         run.finish()
 
-        assert len(glob.glob(os.path.join(tmpdir, "wandb", "offline-*"))) > 0
+        assert glob.glob(os.path.join(tmpdir, "wandb", "offline-*"))
 
 
 def test_custom_dir_env(wandb_init):
     with mock.patch.dict("os.environ", {"WANDB_DIR": tempfile.gettempdir()}):
         run = wandb_init(mode="offline")
         run.finish()
-    assert len(glob.glob(os.path.join(tempfile.gettempdir(), "wandb", "offline-*"))) > 0
+    assert glob.glob(os.path.join(tempfile.gettempdir(), "wandb", "offline-*"))
 
 
 @pytest.mark.xfail(reason="Backend race condition")

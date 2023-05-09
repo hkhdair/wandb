@@ -171,13 +171,12 @@ def get_args(
 ) -> Optional[List[str]]:
     if env is None:
         env = os.environ
-    if env.get(ARGS):
-        try:
-            return json.loads(env.get(ARGS, "[]"))  # type: ignore
-        except ValueError:
-            return None
-    else:
+    if not env.get(ARGS):
         return default or sys.argv[1:]
+    try:
+        return json.loads(env.get(ARGS, "[]"))  # type: ignore
+    except ValueError:
+        return None
 
 
 def get_docker(
@@ -202,10 +201,7 @@ def get_ignore(
     if env is None:
         env = os.environ
     ignore = env.get(IGNORE)
-    if ignore is not None:
-        return ignore.split(",")
-    else:
-        return default
+    return ignore.split(",") if ignore is not None else default
 
 
 def get_project(
@@ -345,39 +341,34 @@ def get_magic(
 ) -> Optional[str]:
     if env is None:
         env = os.environ
-    val = env.get(MAGIC, default)
-    return val
+    return env.get(MAGIC, default)
 
 
 def get_data_dir(env: Optional[Env] = None) -> str:
     default_dir = appdirs.user_data_dir("wandb")
     if env is None:
         env = os.environ
-    val = env.get(DATA_DIR, default_dir)
-    return val
+    return env.get(DATA_DIR, default_dir)
 
 
 def get_artifact_dir(env: Optional[Env] = None) -> str:
     default_dir = os.path.join(".", "artifacts")
     if env is None:
         env = os.environ
-    val = env.get(ARTIFACT_DIR, default_dir)
-    return val
+    return env.get(ARTIFACT_DIR, default_dir)
 
 
 def get_cache_dir(env: Optional[Env] = None) -> str:
     default_dir = appdirs.user_cache_dir("wandb")
     if env is None:
         env = os.environ
-    val = env.get(CACHE_DIR, default_dir)
-    return val
+    return env.get(CACHE_DIR, default_dir)
 
 
 def get_use_v1_artifacts(env: Optional[Env] = None) -> bool:
     if env is None:
         env = os.environ
-    val = bool(env.get(USE_V1_ARTIFACTS, False))
-    return val
+    return bool(env.get(USE_V1_ARTIFACTS, False))
 
 
 def get_agent_max_initial_failures(
@@ -416,5 +407,5 @@ def disable_git(env: Optional[Env] = None) -> bool:
         env = os.environ
     val = env.get(DISABLE_GIT, default="False")
     if isinstance(val, str):
-        val = False if val.lower() == "false" else True
+        val = val.lower() != "false"
     return val

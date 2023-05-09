@@ -118,8 +118,7 @@ class Agent:
         logger.debug("Agent._setup()")
         self._init()
         parts = dict(entity=self._entity, project=self._project, name=self._sweep_path)
-        err = sweep_utils.parse_sweep_id(parts)
-        if err:
+        if err := sweep_utils.parse_sweep_id(parts):
             wandb.termerror(err)
             return
         entity = parts.get("entity") or self._entity
@@ -138,8 +137,7 @@ class Agent:
     def _stop_run(self, run_id):
         logger.debug(f"Stopping run {run_id}.")
         self._run_status[run_id] = RunStatus.STOPPED
-        thread = self._run_threads.get(run_id)
-        if thread:
+        if thread := self._run_threads.get(run_id):
             _terminate_thread(thread)
 
     def _stop_all_runs(self):
@@ -163,8 +161,9 @@ class Agent:
                 for run, status in self._run_status.items()
                 if status in (RunStatus.QUEUED, RunStatus.RUNNING)
             }
-            commands = self._api.agent_heartbeat(self._agent_id, {}, run_status)
-            if commands:
+            if commands := self._api.agent_heartbeat(
+                self._agent_id, {}, run_status
+            ):
                 job = Job(commands[0])
                 logger.debug(f"Job received: {job}")
                 if job.type in ["run", "resume"]:
@@ -231,9 +230,7 @@ class Agent:
                         elif (
                             time.time() - self._start_time < self.FLAPPING_MAX_SECONDS
                         ) and (len(self._exceptions) >= self.FLAPPING_MAX_FAILURES):
-                            msg = "Detected {} failed runs in the first {} seconds, killing sweep.".format(
-                                self.FLAPPING_MAX_FAILURES, self.FLAPPING_MAX_SECONDS
-                            )
+                            msg = f"Detected {self.FLAPPING_MAX_FAILURES} failed runs in the first {self.FLAPPING_MAX_SECONDS} seconds, killing sweep."
                             logger.error(msg)
                             wandb.termerror(msg)
                             wandb.termlog(
@@ -245,9 +242,7 @@ class Agent:
                             self._max_initial_failures < len(self._exceptions)
                             and len(self._exceptions) >= count
                         ):
-                            msg = "Detected {} failed runs in a row at start, killing sweep.".format(
-                                self._max_initial_failures
-                            )
+                            msg = f"Detected {self._max_initial_failures} failed runs in a row at start, killing sweep."
                             logger.error(msg)
                             wandb.termerror(msg)
                             wandb.termlog(
@@ -265,12 +260,11 @@ class Agent:
                     self._exit()
                     return
                 except Exception as e:
-                    if self._exit_flag:
-                        logger.debug("Exiting main loop due to exit flag.")
-                        wandb.termlog("Sweep Agent: Killed.")
-                        return
-                    else:
+                    if not self._exit_flag:
                         raise e
+                    logger.debug("Exiting main loop due to exit flag.")
+                    wandb.termlog("Sweep Agent: Killed.")
+                    return
         finally:
             _INSTANCES -= 1
 
@@ -279,7 +273,7 @@ class Agent:
             run_id = job.run_id
 
             config_file = os.path.join(
-                "wandb", "sweep-" + self._sweep_id, "config-" + run_id + ".yaml"
+                "wandb", f"sweep-{self._sweep_id}", f"config-{run_id}.yaml"
             )
             os.environ[wandb.env.RUN_ID] = run_id
             base_dir = os.environ.get(wandb.env.DIR, "")
@@ -293,7 +287,7 @@ class Agent:
 
             wandb.termlog(f"Agent Starting Run: {run_id} with config:")
             for k, v in job.config.items():
-                wandb.termlog("\t{}: {}".format(k, v["value"]))
+                wandb.termlog(f'\t{k}: {v["value"]}')
 
             self._function()
             wandb.finish()
@@ -312,9 +306,7 @@ class Agent:
 
     def run(self):
         logger.info(
-            "Starting sweep agent: entity={}, project={}, count={}".format(
-                self._entity, self._project, self._count
-            )
+            f"Starting sweep agent: entity={self._entity}, project={self._project}, count={self._count}"
         )
         self._setup()
         # self._main_thread = threading.Thread(target=self._run_jobs_from_queue)

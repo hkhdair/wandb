@@ -46,7 +46,6 @@ def test_table_logging(
         }
     )
     run.finish()
-    assert True
 
 
 def test_object3d_logging(relay_server, wandb_init, assets_path):
@@ -68,7 +67,6 @@ def test_partitioned_table_logging(wandb_init):
     run = wandb_init()
     run.log({"logged_table": wandb.data_types.PartitionedTable("parts")})
     run.finish()
-    assert True
 
 
 def test_joined_table_logging(wandb_init):
@@ -89,7 +87,6 @@ def test_joined_table_logging(wandb_init):
     run.log_artifact(art)
     run.log({"logged_table": jt})
     run.finish()
-    assert True
 
 
 # @pytest.mark.skip(reason="Currently seems to fail in CI")
@@ -99,7 +96,6 @@ def test_log_with_dir_sep_windows(wandb_init):
     wb_image = wandb.Image(image)
     run.log({"train/image": wb_image})
     run.finish()
-    assert True
 
 
 # @pytest.mark.skip(reason="Currently seems to fail in CI")
@@ -115,14 +111,13 @@ def test_log_with_back_slash_windows(wandb_init):
         run.log({r"train\image": wb_image})
 
     run.finish()
-    assert True
 
 
 def test_image_array_old_wandb(relay_server, wandb_init, monkeypatch, capsys):
     with relay_server() as relay:
         monkeypatch.setattr(wandb.util, "_get_max_cli_version", lambda: "0.10.33")
         run = wandb_init()
-        wb_image = [wandb.Image(np.zeros((28, 28))) for i in range(5)]
+        wb_image = [wandb.Image(np.zeros((28, 28))) for _ in range(5)]
         run.log({"logged_images": wb_image})
         run.finish()
         outerr = capsys.readouterr()

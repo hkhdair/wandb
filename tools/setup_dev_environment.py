@@ -42,14 +42,14 @@ def main():
 
     if python_versions is None:
         python_versions = PYTHON_VERSIONS
-    else:
-        invalid_versions = [v for v in python_versions if v not in PYTHON_VERSIONS]
-        if invalid_versions:
-            print(
-                f"Requested invalid python versions: {invalid_versions}.\n"
-                f"Please select from {PYTHON_VERSIONS}."
-            )
-            sys.exit(1)
+    elif invalid_versions := [
+        v for v in python_versions if v not in PYTHON_VERSIONS
+    ]:
+        print(
+            f"Requested invalid python versions: {invalid_versions}.\n"
+            f"Please select from {PYTHON_VERSIONS}."
+        )
+        sys.exit(1)
 
     print(f"{Console.BLUE}Configuring test environment...{Console.END}")
 

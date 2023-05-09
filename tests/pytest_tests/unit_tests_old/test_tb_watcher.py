@@ -32,10 +32,10 @@ def test_tb_watcher_save_row_custom_chart(mocked_run, tbwatcher_util):
         save=False,
         root_dir=mocked_run.dir,
     )
-    assert "visualize" in [k for k in ctx_util.config["_wandb"]["value"].keys()]
-    assert "pr/pr_curves" in [
-        k for k in ctx_util.config["_wandb"]["value"]["visualize"].keys()
-    ]
+    assert "visualize" in list(ctx_util.config["_wandb"]["value"].keys())
+    assert "pr/pr_curves" in list(
+        ctx_util.config["_wandb"]["value"]["visualize"].keys()
+    )
 
 
 def test_tb_watcher_logdir_not_exists(mocked_run, tbwatcher_util, capsys):

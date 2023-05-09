@@ -69,18 +69,17 @@ def nested_get(json: dict, keys: str) -> Any:
     keys = keys.split(".")
     if len(keys) == 1:
         return vars(json)[keys[0]]
-    else:
-        rv = json
-        for key in keys:
-            if isinstance(rv, Base):
-                if not hasattr(rv, key):
-                    setattr(rv, key, {})
-                rv = getattr(rv, key)
-            else:
-                if key not in rv:
-                    rv[key] = None
-                rv = rv[key]
-        return rv
+    rv = json
+    for key in keys:
+        if isinstance(rv, Base):
+            if not hasattr(rv, key):
+                setattr(rv, key, {})
+            rv = getattr(rv, key)
+        else:
+            if key not in rv:
+                rv[key] = None
+            rv = rv[key]
+    return rv
 
 
 def nested_set(json: dict, keys: str, value: Any) -> None:
@@ -251,7 +250,7 @@ class ShortReprMixin:
         settings = [
             f"{k}={v!r}" for k, v in props.items() if not self._is_interesting(v)
         ]
-        return "{}({})".format(clas, ", ".join(settings))
+        return f'{clas}({", ".join(settings)})'
 
     @staticmethod
     def _is_interesting(x: Any) -> bool:
@@ -343,16 +342,13 @@ def fix_collisions(panels: List[Panel]) -> List[Panel]:
 def collides(p1: Panel, p2: Panel) -> bool:
     l1, l2 = p1.layout, p2.layout
 
-    if (
-        (p1.spec["__id__"] == p2.spec["__id__"])
-        or (l1["x"] + l1["w"] <= l2["x"])
-        or (l1["x"] >= l2["w"] + l2["x"])
-        or (l1["y"] + l1["h"] <= l2["y"])
-        or (l1["y"] >= l2["y"] + l2["h"])
-    ):
-        return False
-
-    return True
+    return (
+        p1.spec["__id__"] != p2.spec["__id__"]
+        and l1["x"] + l1["w"] > l2["x"]
+        and l1["x"] < l2["w"] + l2["x"]
+        and l1["y"] + l1["h"] > l2["y"]
+        and l1["y"] < l2["y"] + l2["h"]
+    )
 
 
 def shift(p1: Panel, p2: Panel) -> Tuple[Panel, Panel]:

@@ -195,10 +195,7 @@ def test_data_logger_val_inferred_proc(wandb_init):
     ]
 
     if CAN_INFER_IMAGE_AND_VIDEO:
-        cols.append("2dimages:image")
-        cols.append("3dimages:image")
-        cols.append("video:video")
-
+        cols.extend(("2dimages:image", "3dimages:image", "video:video"))
     tcols = vd.validation_indexes[0]._table.columns
     row = vd.validation_indexes[0]._table.data[0]
 
@@ -276,10 +273,7 @@ def test_data_logger_val_inferred_proc_no_class(wandb_init):
     ]
 
     if CAN_INFER_IMAGE_AND_VIDEO:
-        cols.append("2dimages:image")
-        cols.append("3dimages:image")
-        cols.append("video:video")
-
+        cols.extend(("2dimages:image", "3dimages:image", "video:video"))
     tcols = vd.validation_indexes[0]._table.columns
 
     row = vd.validation_indexes[0]._table.data[0]
@@ -400,10 +394,7 @@ def test_data_logger_pred_inferred_proc(wandb_init):
     ]
 
     if CAN_INFER_IMAGE_AND_VIDEO:
-        cols.append("2dimages:image")
-        cols.append("3dimages:image")
-        cols.append("video:video")
-
+        cols.extend(("2dimages:image", "3dimages:image", "video:video"))
     tcols = t.columns
     row = t.data[0]
 
@@ -479,10 +470,7 @@ def test_data_logger_pred_inferred_proc_no_classes(wandb_init):
         "nodes:argmin",
     ]
     if CAN_INFER_IMAGE_AND_VIDEO:
-        cols.append("2dimages:image")
-        cols.append("3dimages:image")
-        cols.append("video:video")
-
+        cols.extend(("2dimages:image", "3dimages:image", "video:video"))
     tcols = t.columns
 
     row = t.data[0]

@@ -88,7 +88,7 @@ class TorchHistory:
         log_freq - log gradients/parameters every N batches
         """
         # if name is not None:
-        prefix = prefix + name
+        prefix += name
 
         if not hasattr(module, "_wandb_hook_names"):
             module._wandb_hook_names = []
@@ -102,7 +102,7 @@ class TorchHistory:
                     data = parameter.data
                 else:
                     data = parameter
-                self.log_tensor_stats(data.cpu(), "parameters/" + prefix + name)
+                self.log_tensor_stats(data.cpu(), f"parameters/{prefix}{name}")
 
         log_track_params = log_track_init(log_freq)
         try:
@@ -111,8 +111,8 @@ class TorchHistory:
                     mod, inp, outp, log_track_params
                 )
             )
-            self._hook_handles["parameters/" + prefix] = hook
-            module._wandb_hook_names.append("parameters/" + prefix)
+            self._hook_handles[f"parameters/{prefix}"] = hook
+            module._wandb_hook_names.append(f"parameters/{prefix}")
         except RuntimeError as e:
             wandb.termwarn(
                 f"Trying to register forward_hook failed ({e}) - skipping parameter tracking."
@@ -131,7 +131,7 @@ class TorchHistory:
         """
 
         # if name is not None:
-        prefix = prefix + name
+        prefix += name
 
         if not hasattr(module, "_wandb_hook_names"):
             module._wandb_hook_names = []
@@ -139,18 +139,18 @@ class TorchHistory:
         for name, parameter in module.named_parameters():
             if parameter.requires_grad:
                 log_track_grad = log_track_init(log_freq)
-                module._wandb_hook_names.append("gradients/" + prefix + name)
+                module._wandb_hook_names.append(f"gradients/{prefix}{name}")
                 self._hook_variable_gradient_stats(
-                    parameter, "gradients/" + prefix + name, log_track_grad
+                    parameter, f"gradients/{prefix}{name}", log_track_grad
                 )
 
     def log_tensor_stats(self, tensor, name):
         """Add distribution statistics on a tensor's elements to the current History entry"""
         # TODO Handle the case of duplicate names.
 
-        if isinstance(tensor, tuple) or isinstance(tensor, list):
-            while (isinstance(tensor, tuple) or isinstance(tensor, list)) and (
-                isinstance(tensor[0], tuple) or isinstance(tensor[0], list)
+        if isinstance(tensor, (tuple, list)):
+            while (isinstance(tensor, (tuple, list))) and (
+                isinstance(tensor[0], (tuple, list))
             ):
                 tensor = [item for sublist in tensor for item in sublist]
             tensor = torch.cat([t.reshape(-1) for t in tensor])
@@ -222,8 +222,8 @@ class TorchHistory:
         tmax = flat.max().item()
         if sparse_zeros:
             # If we've got zeros to add in, make sure zero is in the hist range.
-            tmin = 0 if tmin > 0 else tmin
-            tmax = 0 if tmax < 0 else tmax
+            tmin = min(tmin, 0)
+            tmax = max(tmax, 0)
         # Anecdotally, this can somehow happen sometimes. Maybe a precision error
         # in min()/max() above. Swap here to prevent a runtime error.
         if tmin > tmax:
@@ -294,10 +294,7 @@ class TorchHistory:
 
     def _torch_hook_handle_is_valid(self, handle):
         d = handle.hooks_dict_ref()
-        if d is None:
-            return False
-        else:
-            return handle.id in d
+        return False if d is None else handle.id in d
 
     def _no_finite_values(self, tensor: "torch.Tensor") -> bool:
         return tensor.shape == torch.Size([0]) or (~torch.isfinite(tensor)).all().item()
@@ -384,7 +381,7 @@ class TorchGraph(wandb.data_types.Graph):
         for name, sub_module in module.named_children():
             name = name or str(layers)
             if prefix:
-                name = prefix + "." + name
+                name = f"{prefix}.{name}"
             layers += 1
             if not isinstance(sub_module, torch.nn.Module):
                 # TODO: Why does this happen?
@@ -416,13 +413,11 @@ class TorchGraph(wandb.data_types.Graph):
                     graph_hook = sub_module.register_forward_hook(
                         self.create_forward_hook(name, graph_idx)
                     )
-                    wandb.run._torch._hook_handles[
-                        "topology/" + str(id(graph_hook))
-                    ] = graph_hook
+                    wandb.run._torch._hook_handles[f"topology/{id(graph_hook)}"] = graph_hook
                     if not hasattr(parent, "_wandb_hook_names"):
                         # should never happen but let's be extra safe
                         parent._wandb_hook_names = []
-                    parent._wandb_hook_names.append("topology/" + str(id(graph_hook)))
+                    parent._wandb_hook_names.append(f"topology/{id(graph_hook)}")
                 except RuntimeError as e:
                     wandb.termwarn(
                         f"Trying to register forward_hook failed ({e}) - skipping graph tracking.",

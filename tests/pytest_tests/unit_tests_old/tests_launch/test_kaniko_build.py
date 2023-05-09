@@ -167,8 +167,10 @@ def test_create_kaniko_job_static(mock_kubernetes_client, runner):
             == "credentials"
         )
         assert (
-            job["spec"]["template"]["spec"]["volumes"][1]["secret"]["items"][0].mode
-            == None
+            job["spec"]["template"]["spec"]["volumes"][1]["secret"]["items"][
+                0
+            ].mode
+            is None
         )
 
 

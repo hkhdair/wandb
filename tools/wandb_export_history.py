@@ -30,8 +30,7 @@ def chunk(n: int, iterable) -> Iterator[List[Dict]]:
     while not done:
         data = []
         try:
-            for _ in range(n):
-                data.append(next(iterable))
+            data.extend(next(iterable) for _ in range(n))
         except StopIteration:
             if data:
                 yield data
@@ -54,13 +53,12 @@ def wandb_export_history(
     api = api or wandb.Api()
     db_file = db_file or DB_FILE
     db_table = db_table or "history"
-    history_exclude_prefix = history_exclude_prefix or "system/"
     read_page_size = read_page_size or 1000
     write_page_size = write_page_size or 1000
 
     run = api.run(run)
     keys = run.history_keys.get("keys", [])
-    if history_exclude_prefix:
+    if history_exclude_prefix := history_exclude_prefix or "system/":
         keys = list(filter(lambda x: not x.startswith(history_exclude_prefix), keys))
 
     db_file = db_file

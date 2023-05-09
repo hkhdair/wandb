@@ -94,24 +94,21 @@ class _TableKey(str, _TableLinkMixin):
 
 class _TableIndex(int, _TableLinkMixin):
     def get_row(self):
-        row = {}
-        if self._table:
-            row = {
-                c: self._table.data[self][i] for i, c in enumerate(self._table.columns)
+        return (
+            {
+                c: self._table.data[self][i]
+                for i, c in enumerate(self._table.columns)
             }
-
-        return row
+            if self._table
+            else {}
+        )
 
 
 def _json_helper(val, artifact):
     if isinstance(val, WBValue):
         return val.to_json(artifact)
     elif val.__class__ == dict:
-        res = {}
-        for key in val:
-            res[key] = _json_helper(val[key], artifact)
-        return res
-
+        return {key: _json_helper(val[key], artifact) for key in val}
     if hasattr(val, "tolist"):
         py_val = val.tolist()
         if val.__class__.__name__ == "datetime64" and isinstance(py_val, int):
@@ -277,30 +274,26 @@ class Table(Media):
         # Explicit dataframe option
         if dataframe is not None:
             self._init_from_dataframe(dataframe, columns, optional, dtype)
-        else:
-            # Expected pattern
-            if data is not None:
-                if util.is_numpy_array(data):
-                    self._init_from_ndarray(data, columns, optional, dtype)
-                elif util.is_pandas_data_frame(data):
-                    self._init_from_dataframe(data, columns, optional, dtype)
-                else:
-                    self._init_from_list(data, columns, optional, dtype)
-
-            # legacy
-            elif rows is not None:
-                self._init_from_list(rows, columns, optional, dtype)
-
-            # Default empty case
+        elif data is not None:
+            if util.is_numpy_array(data):
+                self._init_from_ndarray(data, columns, optional, dtype)
+            elif util.is_pandas_data_frame(data):
+                self._init_from_dataframe(data, columns, optional, dtype)
             else:
-                self._init_from_list([], columns, optional, dtype)
+                self._init_from_list(data, columns, optional, dtype)
+
+        elif rows is not None:
+            self._init_from_list(rows, columns, optional, dtype)
+
+        else:
+            self._init_from_list([], columns, optional, dtype)
 
     @staticmethod
     def _assert_valid_columns(columns):
         valid_col_types = [str, int]
         assert type(columns) is list, "columns argument expects a `list` object"
         assert len(columns) == 0 or all(
-            [type(col) in valid_col_types for col in columns]
+            type(col) in valid_col_types for col in columns
         ), "columns argument expects list of strings or ints"
 
     def _init_from_list(self, data, columns, optional=True, dtype=None):
@@ -371,11 +364,7 @@ class Table(Media):
             result_type = wbtype.assign(row[col_ndx])
             if isinstance(result_type, _dtypes.InvalidType):
                 raise TypeError(
-                    "Existing data {}, of type {} cannot be cast to {}".format(
-                        row[col_ndx],
-                        _dtypes.TypeRegistry.type_of(row[col_ndx]),
-                        wbtype,
-                    )
+                    f"Existing data {row[col_ndx]}, of type {_dtypes.TypeRegistry.type_of(row[col_ndx])} cannot be cast to {wbtype}"
                 )
             wbtype = result_type
 
@@ -388,15 +377,13 @@ class Table(Media):
                 not optional
             ), "Primary keys, foreign keys, and foreign indexes cannot be optional"
 
-        if (is_fk or is_fk) and id(wbtype.params["table"]) == id(self):
+        if is_fk and id(wbtype.params["table"]) == id(self):
             raise AssertionError("Cannot set a foreign table reference to same table")
 
         if is_pk:
             assert (
                 self._pk_col is None
-            ), "Cannot have multiple primary keys - {} is already set as the primary key.".format(
-                self._pk_col
-            )
+            ), f"Cannot have multiple primary keys - {self._pk_col} is already set as the primary key."
 
         # Update the column type
         self._column_types.params["type_map"][col_name] = wbtype
@@ -410,23 +397,21 @@ class Table(Media):
 
     def _eq_debug(self, other, should_assert=False):
         eq = isinstance(other, Table)
-        assert not should_assert or eq, "Found type {}, expected {}".format(
-            other.__class__, Table
-        )
+        assert (
+            not should_assert or eq
+        ), f"Found type {other.__class__}, expected {Table}"
         eq = eq and len(self.data) == len(other.data)
-        assert not should_assert or eq, "Found {} rows, expected {}".format(
-            len(other.data), len(self.data)
-        )
+        assert (
+            not should_assert or eq
+        ), f"Found {len(other.data)} rows, expected {len(self.data)}"
         eq = eq and self.columns == other.columns
-        assert not should_assert or eq, "Found columns {}, expected {}".format(
-            other.columns, self.columns
-        )
+        assert (
+            not should_assert or eq
+        ), f"Found columns {other.columns}, expected {self.columns}"
         eq = eq and self._column_types == other._column_types
         assert (
             not should_assert or eq
-        ), "Found column type {}, expected column type {}".format(
-            other._column_types, self._column_types
-        )
+        ), f"Found column type {other._column_types}, expected column type {self._column_types}"
         if eq:
             for row_ndx in range(len(self.data)):
                 for col_ndx in range(len(self.data[row_ndx])):
@@ -437,12 +422,7 @@ class Table(Media):
                     eq = eq and _eq
                     assert (
                         not should_assert or eq
-                    ), "Unequal data at row_ndx {} col_ndx {}: found {}, expected {}".format(
-                        row_ndx,
-                        col_ndx,
-                        other.data[row_ndx][col_ndx],
-                        self.data[row_ndx][col_ndx],
-                    )
+                    ), f"Unequal data at row_ndx {row_ndx} col_ndx {col_ndx}: found {other.data[row_ndx][col_ndx]}, expected {self.data[row_ndx][col_ndx]}"
                     if not eq:
                         return eq
         return eq
@@ -462,9 +442,7 @@ class Table(Media):
         """
         if len(data) != len(self.columns):
             raise ValueError(
-                "This table expects {} columns: {}, found {}".format(
-                    len(self.columns), self.columns, len(data)
-                )
+                f"This table expects {len(self.columns)} columns: {self.columns}, found {len(data)}"
             )
 
         # Special case to pre-emptively cast a column as a key.
@@ -503,9 +481,7 @@ class Table(Media):
         result_type = current_type.assign(incoming_row_dict)
         if isinstance(result_type, _dtypes.InvalidType):
             raise TypeError(
-                "Data row contained incompatible types:\n{}".format(
-                    current_type.explain(incoming_row_dict)
-                )
+                f"Data row contained incompatible types:\n{current_type.explain(incoming_row_dict)}"
             )
         return result_type
 
@@ -534,7 +510,7 @@ class Table(Media):
         # this code path will be ultimately removed. The 10k limit warning confuses
         # users given that we publicly say 200k is the limit.
         data = self._to_table_json(warn=False)
-        tmp_path = os.path.join(MEDIA_TMP.name, runid.generate_id() + ".table.json")
+        tmp_path = os.path.join(MEDIA_TMP.name, f"{runid.generate_id()}.table.json")
         data = _numpy_arrays_to_lists(data)
         with codecs.open(tmp_path, "w", encoding="utf-8") as fp:
             util.json_dump_safer(data, fp)
@@ -677,7 +653,9 @@ class Table(Media):
                         },
                     )
                     entry = artifact.add_file(
-                        npz_file_name, "media/serialized_data/" + file_name, is_tmp=True
+                        npz_file_name,
+                        f"media/serialized_data/{file_name}",
+                        is_tmp=True,
                     )
                     ndarray_type._set_serialization_path(entry.path, str(col_name))
                     ndarray_col_ndxs.add(col_ndx)
@@ -751,9 +729,7 @@ class Table(Media):
         for t in c_types:
             if isinstance(c_types[t], _PrimaryKeyType):
                 _pk_col = t
-            elif isinstance(c_types[t], _ForeignKeyType) or isinstance(
-                c_types[t], _ForeignIndexType
-            ):
+            elif isinstance(c_types[t], (_ForeignKeyType, _ForeignIndexType)):
                 _fk_cols.add(t)
 
         # If there are updates to perform, safely update them
@@ -767,9 +743,7 @@ class Table(Media):
             # If there is a removed FK
             if len(self._fk_cols - _fk_cols) > 0:
                 raise AssertionError(
-                    "Cannot unset foreign key. Attempted to unset ({})".format(
-                        self._fk_cols - _fk_cols
-                    )
+                    f"Cannot unset foreign key. Attempted to unset ({self._fk_cols - _fk_cols})"
                 )
 
             self._pk_col = _pk_col
@@ -850,10 +824,7 @@ class Table(Media):
         for ndx in range(max(len(data), len(self.data))):
             if is_first_col:
                 self.data.append([])
-            if is_np:
-                self.data[ndx].append(data[ndx])
-            else:
-                self.data[ndx].append(data[ndx])
+            self.data[ndx].append(data[ndx])
         # add the column
         self.columns.append(name)
 
@@ -1022,9 +993,7 @@ class PartitionedTable(Media):
                 columns = part.columns
             elif columns != part.columns:
                 raise ValueError(
-                    "Table parts have non-matching columns. {} != {}".format(
-                        columns, part.columns
-                    )
+                    f"Table parts have non-matching columns. {columns} != {part.columns}"
                 )
             for _, row in part.iterrows():
                 yield ndx, row
@@ -1085,7 +1054,7 @@ class Audio(BatchableMedia):
                 required='Raw audio requires the soundfile package. To get it, run "pip install soundfile"',
             )
 
-            tmp_path = os.path.join(MEDIA_TMP.name, runid.generate_id() + ".wav")
+            tmp_path = os.path.join(MEDIA_TMP.name, f"{runid.generate_id()}.wav")
             soundfile.write(tmp_path, data_or_path, sample_rate)
             self._duration = len(data_or_path) / float(sample_rate)
 
@@ -1137,14 +1106,11 @@ class Audio(BatchableMedia):
             "count": len(audio_list),
             "audio": [a.to_json(run) for a in audio_list],
         }
-        sample_rates = cls.sample_rates(audio_list)
-        if sample_rates:
+        if sample_rates := cls.sample_rates(audio_list):
             meta["sampleRates"] = sample_rates
-        durations = cls.durations(audio_list)
-        if durations:
+        if durations := cls.durations(audio_list):
             meta["durations"] = durations
-        captions = cls.captions(audio_list)
-        if captions:
+        if captions := cls.captions(audio_list):
             meta["captions"] = captions
 
         return meta
@@ -1253,15 +1219,17 @@ class JoinedTable(Media):
         """Helper method to validate that the table input is one of the 3 supported types."""
         return (
             (type(table) == str and table.endswith(".table.json"))
-            or isinstance(table, Table)
-            or isinstance(table, PartitionedTable)
-            or (hasattr(table, "ref_url") and table.ref_url().endswith(".table.json"))
+            or isinstance(table, (Table, PartitionedTable))
+            or (
+                hasattr(table, "ref_url")
+                and table.ref_url().endswith(".table.json")
+            )
         )
 
     def _ensure_table_in_artifact(self, table, artifact, table_ndx):
         """Helper method to add the table to the incoming artifact. Returns the path."""
-        if isinstance(table, Table) or isinstance(table, PartitionedTable):
-            table_name = f"t{table_ndx}_{str(id(self))}"
+        if isinstance(table, (Table, PartitionedTable)):
+            table_name = f"t{table_ndx}_{id(self)}"
             if (
                 table._artifact_source is not None
                 and table._artifact_source.name is not None
@@ -1269,19 +1237,18 @@ class JoinedTable(Media):
                 table_name = os.path.basename(table._artifact_source.name)
             entry = artifact.add(table, table_name)
             table = entry.path
-        # Check if this is an ArtifactManifestEntry
         elif hasattr(table, "ref_url"):
             # Give the new object a unique, yet deterministic name
             name = binascii.hexlify(base64.standard_b64decode(table.digest)).decode(
                 "ascii"
             )[:20]
             entry = artifact.add_reference(
-                table.ref_url(), "{}.{}.json".format(name, table.name.split(".")[-2])
+                table.ref_url(), f'{name}.{table.name.split(".")[-2]}.json'
             )[0]
             table = entry.path
 
-        err_str = "JoinedTable table:{} not found in artifact. Add a table to the artifact using Artifact#add(<table>, {}) before adding this JoinedTable"
         if table not in artifact._manifest.entries:
+            err_str = "JoinedTable table:{} not found in artifact. Add a table to the artifact using Artifact#add(<table>, {}) before adding this JoinedTable"
             raise ValueError(err_str.format(table, table))
 
         return table
@@ -1300,13 +1267,11 @@ class JoinedTable(Media):
         else:
             table1 = self._ensure_table_in_artifact(self._table1, artifact_or_run, 1)
             table2 = self._ensure_table_in_artifact(self._table2, artifact_or_run, 2)
-            json_obj.update(
-                {
-                    "table1": table1,
-                    "table2": table2,
-                    "join_key": self._join_key,
-                }
-            )
+            json_obj |= {
+                "table1": table1,
+                "table2": table2,
+                "join_key": self._join_key,
+            }
         return json_obj
 
     def __ne__(self, other):
@@ -1314,13 +1279,13 @@ class JoinedTable(Media):
 
     def _eq_debug(self, other, should_assert=False):
         eq = isinstance(other, JoinedTable)
-        assert not should_assert or eq, "Found type {}, expected {}".format(
-            other.__class__, JoinedTable
-        )
+        assert (
+            not should_assert or eq
+        ), f"Found type {other.__class__}, expected {JoinedTable}"
         eq = eq and self._join_key == other._join_key
-        assert not should_assert or eq, "Found {} join key, expected {}".format(
-            other._join_key, self._join_key
-        )
+        assert (
+            not should_assert or eq
+        ), f"Found {other._join_key} join key, expected {self._join_key}"
         eq = eq and self._table1._eq_debug(other._table1, should_assert)
         eq = eq and self._table2._eq_debug(other._table2, should_assert)
         return eq
@@ -1359,7 +1324,7 @@ class Bokeh(Media):
             if "references" in b_json["roots"]:
                 b_json["roots"]["references"].sort(key=lambda x: x["id"])
 
-            tmp_path = os.path.join(MEDIA_TMP.name, runid.generate_id() + ".bokeh.json")
+            tmp_path = os.path.join(MEDIA_TMP.name, f"{runid.generate_id()}.bokeh.json")
             with codecs.open(tmp_path, "w", encoding="utf-8") as fp:
                 util.json_dump_safer(b_json, fp)
             self._set_file(tmp_path, is_tmp=True, extension=".bokeh.json")
@@ -1385,10 +1350,7 @@ class Bokeh(Media):
 
 
 def _nest(thing):
-    # Use tensorflows nest function if available, otherwise just wrap object in an array"""
-
-    tfutil = util.get_module("tensorflow.python.util")
-    if tfutil:
+    if tfutil := util.get_module("tensorflow.python.util"):
         return tfutil.nest.flatten(thing)
     else:
         return [thing]
@@ -1440,7 +1402,7 @@ class Graph(Media):
 
     def bind_to_run(self, *args, **kwargs):
         data = self._to_graph_json()
-        tmp_path = os.path.join(MEDIA_TMP.name, runid.generate_id() + ".graph.json")
+        tmp_path = os.path.join(MEDIA_TMP.name, f"{runid.generate_id()}.graph.json")
         data = _numpy_arrays_to_lists(data)
         with codecs.open(tmp_path, "w", encoding="utf-8") as fp:
             util.json_dump_safer(data, fp)
@@ -1580,7 +1542,7 @@ class Node(WBValue):
         self.obj = None
 
         if node is not None:
-            self._attributes.update(node._attributes)
+            self._attributes |= node._attributes
             del self._attributes["id"]
             self.obj = node.obj
 
@@ -1820,11 +1782,11 @@ class _ImageFileType(_dtypes.Type):
 
         if isinstance(box_score_keys, _dtypes.ConstType):
             box_score_keys = box_score_keys._params["val"]
-        if not isinstance(box_score_keys, list) and not isinstance(box_score_keys, set):
-            raise TypeError("box_score_keys must be a list or a set")
-        else:
+        if isinstance(box_score_keys, (list, set)):
             box_score_keys = _dtypes.ConstType(set(box_score_keys))
 
+        else:
+            raise TypeError("box_score_keys must be a list or a set")
         if isinstance(class_map, _dtypes.ConstType):
             class_map = class_map._params["val"]
         if not isinstance(class_map, dict):
@@ -1894,43 +1856,42 @@ class _ImageFileType(_dtypes.Type):
     def from_obj(cls, py_obj):
         if not isinstance(py_obj, Image):
             raise TypeError("py_obj must be a wandb.Image")
+        if hasattr(py_obj, "_boxes") and py_obj._boxes:
+            box_layers = {
+                str(key): set(py_obj._boxes[key]._class_labels.keys())
+                for key in py_obj._boxes.keys()
+            }
+            box_score_keys = {
+                key
+                for val in py_obj._boxes.values()
+                for box in val._val
+                for key in box.get("scores", {}).keys()
+            }
+
         else:
-            if hasattr(py_obj, "_boxes") and py_obj._boxes:
-                box_layers = {
-                    str(key): set(py_obj._boxes[key]._class_labels.keys())
-                    for key in py_obj._boxes.keys()
-                }
-                box_score_keys = {
-                    key
-                    for val in py_obj._boxes.values()
-                    for box in val._val
-                    for key in box.get("scores", {}).keys()
-                }
+            box_layers = {}
+            box_score_keys = set()
 
-            else:
-                box_layers = {}
-                box_score_keys = set()
+        mask_layers = (
+            {
+                str(key): set(
+                    py_obj._masks[key]._val["class_labels"].keys()
+                    if hasattr(py_obj._masks[key], "_val")
+                    else []
+                )
+                for key in py_obj._masks.keys()
+            }
+            if hasattr(py_obj, "_masks") and py_obj._masks
+            else {}
+        )
+        if hasattr(py_obj, "_classes") and py_obj._classes:
+            class_set = {
+                str(item["id"]): item["name"] for item in py_obj._classes._class_set
+            }
+        else:
+            class_set = {}
 
-            if hasattr(py_obj, "_masks") and py_obj._masks:
-                mask_layers = {
-                    str(key): set(
-                        py_obj._masks[key]._val["class_labels"].keys()
-                        if hasattr(py_obj._masks[key], "_val")
-                        else []
-                    )
-                    for key in py_obj._masks.keys()
-                }
-            else:
-                mask_layers = {}
-
-            if hasattr(py_obj, "_classes") and py_obj._classes:
-                class_set = {
-                    str(item["id"]): item["name"] for item in py_obj._classes._class_set
-                }
-            else:
-                class_set = {}
-
-            return cls(box_layers, box_score_keys, mask_layers, class_set)
+        return cls(box_layers, box_score_keys, mask_layers, class_set)
 
 
 class _TableType(_dtypes.Type):
@@ -1944,8 +1905,7 @@ class _TableType(_dtypes.Type):
         if isinstance(column_types, dict):
             column_types = _dtypes.TypedDictType(column_types)
         elif not (
-            isinstance(column_types, _dtypes.TypedDictType)
-            or isinstance(column_types, _dtypes.UnknownType)
+            isinstance(column_types, (_dtypes.TypedDictType, _dtypes.UnknownType))
         ):
             raise TypeError("column_types must be a dict or TypedDictType")
 
@@ -2023,9 +1983,8 @@ class _ForeignKeyType(_dtypes.Type):
             raise AssertionError(
                 "_ForeignKeyType does not support deserialization without an artifact"
             )
-        else:
-            table = artifact.get(json_dict["params"]["table"])
-            col_name = json_dict["params"]["col_name"]
+        table = artifact.get(json_dict["params"]["table"])
+        col_name = json_dict["params"]["col_name"]
 
         if table is None:
             raise AssertionError("Unable to deserialize referenced table")
@@ -2096,9 +2055,7 @@ class _PrimaryKeyType(_dtypes.Type):
     legacy_names = ["wandb.TablePrimaryKey"]
 
     def assign_type(self, wb_type=None):
-        if isinstance(wb_type, _dtypes.StringType) or isinstance(
-            wb_type, _PrimaryKeyType
-        ):
+        if isinstance(wb_type, (_dtypes.StringType, _PrimaryKeyType)):
             return self
         return _dtypes.InvalidType()
 

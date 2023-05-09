@@ -28,7 +28,7 @@ def check(
 ):
     """Check datastore size after multiple items written."""
     record_sizes = []
-    for _, chunk_size in enumerate(chunk_sizes):
+    for chunk_size in chunk_sizes:
         size = ds._write_data(b"\x01" * chunk_size)
         record_sizes.append(size)
     num = 7 + sum(chunk_sizes) + expected_records * 7 + expected_pad
@@ -78,7 +78,7 @@ def test_proto_write_partial():
 
 def test_data_write_full(with_datastore):
     """Write a full block."""
-    sizes, records = tuple([32768 - 7 - 7]), 1
+    sizes, records = (32768 - 7 - 7, ), 1
     check(with_datastore, chunk_sizes=sizes, expected_records=records)
 
 
@@ -133,7 +133,7 @@ def test_data_write_split_overflow(with_datastore):
 
 def test_data_write_fill(with_datastore):
     """Leave just room for 1 more byte, then write a 1 byte, followed by another 1 byte."""
-    sizes = tuple([32768 - 7 - 7 - 8, 1, 1])
+    sizes = 32768 - 7 - 7 - 8, 1, 1
     records = 3
     lengths = (7, 32753 + 7, 0), (32760, 8 + 32760, 0), (32768, 8 + 32768, 0)
     check(

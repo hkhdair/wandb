@@ -37,6 +37,8 @@ def main():
     vocab = set(test_sentence)
     word_to_ix = {word: i for i, word in enumerate(vocab)}
 
+
+
     class NGramLanguageModeler(nn.Module):
         def __init__(self, vocab_size, embedding_dim, context_size):
             super().__init__()
@@ -48,8 +50,8 @@ def main():
             embeds = self.embeddings(inputs).view((1, -1))
             out = F.relu(self.linear1(embeds))
             out = self.linear2(out)
-            log_probs = F.log_softmax(out, dim=1)
-            return log_probs
+            return F.log_softmax(out, dim=1)
+
 
     has_cuda = torch.cuda.is_available()
 

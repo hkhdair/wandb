@@ -13,6 +13,7 @@ import wandb
 
 @pytest.fixture
 def mock_tty(monkeypatch):
+
     class WriteThread(threading.Thread):
         def __init__(self, fname):
             threading.Thread.__init__(self)
@@ -35,7 +36,7 @@ def mock_tty(monkeypatch):
             self.add("_DONE_")
 
     with tempfile.TemporaryDirectory() as tmpdir:
-        fds = dict()
+        fds = {}
 
         def setup_fn(input_str):
             fname = os.path.join(tmpdir, "file.txt")

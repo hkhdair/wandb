@@ -45,11 +45,12 @@ def get_paths() -> List[PurePath]:
         for base, subdirs, files in os.walk(root_dir):
             # Don't walk into excluded subdirectories
             subdirs[:] = list(set(subdirs) - exclude_dirs)
-            for fname in files:
-                if fname.endswith(GENERATE_SUFFIX):
-                    paths.append(PurePath(base, fname))
-    for f in args.files:
-        paths.append(Path(f))
+            paths.extend(
+                PurePath(base, fname)
+                for fname in files
+                if fname.endswith(GENERATE_SUFFIX)
+            )
+    paths.extend(Path(f) for f in args.files)
     return paths
 
 

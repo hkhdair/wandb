@@ -78,14 +78,9 @@ class UploadJob:
                 self._stats.update_failed_file(self.save_path)
                 logger.exception("Failed to upload file: %s", self.save_path)
                 wandb._sentry.exception(e)
-                message = str(e)
-                # TODO: this is usually XML, but could be JSON
-                if hasattr(e, "response"):
-                    message = e.response.content
+                message = e.response.content if hasattr(e, "response") else str(e)
                 wandb.termerror(
-                    'Error uploading "{}": {}, {}'.format(
-                        self.save_path, type(e).__name__, message
-                    )
+                    f'Error uploading "{self.save_path}": {type(e).__name__}, {message}'
                 )
                 raise
 
@@ -141,11 +136,7 @@ class UploadJob:
                 logger.exception("Failed to upload file: %s", self.save_path)
                 wandb._sentry.exception(e)
                 if not self.silent:
-                    wandb.termerror(
-                        'Error uploading "{}": {}, {}'.format(
-                            self.save_name, type(e).__name__, e
-                        )
-                    )
+                    wandb.termerror(f'Error uploading "{self.save_name}": {type(e).__name__}, {e}')
                 raise
 
     def progress(self, total_bytes: int) -> None:

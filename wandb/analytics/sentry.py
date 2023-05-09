@@ -35,9 +35,7 @@ SessionStatus = Literal["ok", "exited", "crashed", "abnormal"]
 def _noop_if_disabled(func: Callable) -> Callable:
     @functools.wraps(func)
     def wrapper(self: Type["Sentry"], *args: Any, **kwargs: Any) -> Any:
-        if self._disabled:
-            return None
-        return func(self, *args, **kwargs)
+        return None if self._disabled else func(self, *args, **kwargs)
 
     return wrapper
 
@@ -125,7 +123,7 @@ class Sentry:
 
         # if the status is not explicitly set, we'll set it to "crashed" if the exception
         # was unhandled, or "errored" if it was handled
-        status = status or ("crashed" if not handled else "errored")  # type: ignore
+        status = status or ("errored" if handled else "crashed")
         self.mark_session(status=status)
 
         client, _ = self.hub._stack[-1]

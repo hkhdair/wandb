@@ -32,8 +32,7 @@ class MockMetric:
     samples: "Deque[Any]" = deque()
 
     def __init__(self, **kwargs):
-        name = kwargs.pop("name", None)
-        if name:
+        if name := kwargs.pop("name", None):
             self.name = name
         self.default_value = kwargs.pop("value", 42)
 
@@ -44,9 +43,7 @@ class MockMetric:
         self.samples.clear()
 
     def aggregate(self) -> dict:
-        if self.samples:
-            return {self.name: self.samples[-1]}
-        return {}
+        return {self.name: self.samples[-1]} if self.samples else {}
 
 
 class MockAsset1:
@@ -109,9 +106,7 @@ class MockBrokenMetric:
         self.samples.clear()
 
     def aggregate(self) -> dict:
-        if self.samples:
-            return {self.name: self.samples[0]}
-        return {}
+        return {self.name: self.samples[0]} if self.samples else {}
 
 
 def test_asset_registry():

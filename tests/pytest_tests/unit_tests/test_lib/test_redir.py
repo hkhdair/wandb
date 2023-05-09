@@ -92,8 +92,7 @@ def test_cursor(cls, capfd):
         o = CapList()
         r = cls("stdout", cbs=[o.append])
         r.install()
-        s = "ABCD\nEFGH\nIJKX\nMNOP"
-        s += "\x1b[1A"
+        s = "ABCD\nEFGH\nIJKX\nMNOP" + "\x1b[1A"
         s += "\x1b[1D"
         s += "L"
         s += "\x1b[1B"
@@ -123,8 +122,7 @@ def test_erase_screen(cls, capfd):
         o = CapList()
         r = cls("stdout", cbs=[o.append])
         r.install()
-        s = "QWERT\nYUIOP\n12345"
-        s += "\r"
+        s = "QWERT\nYUIOP\n12345" + "\r"
         s += "\x1b[J"
         s += "\x1b[A"
         s += "\r"

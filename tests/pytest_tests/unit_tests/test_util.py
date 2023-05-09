@@ -37,12 +37,11 @@ def pt_variable(nested_list, requires_grad=True):
 
 def nested_list(*shape):
     """Make a nested list of lists with a "shape" argument like numpy, TensorFlow, etc."""
-    if not shape:
-        # reduce precision so we can use == for comparison regardless
-        # of conversions between other libraries
-        return [float(np.float16(random.random()))]
-    else:
-        return [nested_list(*shape[1:]) for _ in range(shape[0])]
+    return (
+        [nested_list(*shape[1:]) for _ in range(shape[0])]
+        if shape
+        else [float(np.float16(random.random()))]
+    )
 
 
 def assert_deep_lists_equal(a, b, indices=None):
@@ -66,7 +65,7 @@ def assert_deep_lists_equal(a, b, indices=None):
                 raise
             finally:
                 if top and indices:
-                    print("Diff at index: %s" % list(reversed(indices)))
+                    print(f"Diff at index: {list(reversed(indices))}")
 
 
 def json_friendly_test(orig_data, obj):
@@ -556,9 +555,7 @@ def test_make_check_reply_fn_false():
     e.response = mock.MagicMock(spec=requests.Response)
 
     def is_special(e):
-        if e.response.status_code == 500:
-            return False
-        return None
+        return False if e.response.status_code == 500 else None
 
     check_retry_fn = util.make_check_retry_fn(
         check_fn=is_special,
@@ -584,9 +581,7 @@ def test_make_check_reply_fn_true():
     e.response = mock.MagicMock(spec=requests.Response)
 
     def is_special(e):
-        if e.response.status_code == 400:
-            return True
-        return None
+        return True if e.response.status_code == 400 else None
 
     check_retry_fn = util.make_check_retry_fn(
         check_fn=is_special,

@@ -50,7 +50,7 @@ def test_artifact_download(runner, git_repo, mock_server):
     if platform.system() == "Windows":
         head, tail = os.path.splitdrive(path)
         path = head + tail.replace(":", "-")
-    assert "Artifact downloaded to %s" % path in result.output
+    assert f"Artifact downloaded to {path}" in result.output
     assert os.path.exists(path)
 
 
@@ -112,11 +112,11 @@ def test_restore_no_remote(runner, mock_server, git_repo, docker, monkeypatch):
             "WANDB_DOCKER=wandb/deepo@sha256:abc123",
             "--ipc=host",
             "-v",
-            wandb.docker.entrypoint + ":/wandb-entrypoint.sh",
+            f"{wandb.docker.entrypoint}:/wandb-entrypoint.sh",
             "--entrypoint",
             "/wandb-entrypoint.sh",
             "-v",
-            os.getcwd() + ":/app",
+            f"{os.getcwd()}:/app",
             "-w",
             "/app",
             "-e",

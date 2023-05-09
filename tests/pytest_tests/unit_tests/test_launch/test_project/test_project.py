@@ -24,9 +24,10 @@ def test_project_build_required():
 
     assert project.build_required() is False
 
-    mock_args.update(
-        {"job": None, "uri": "https://wandb.ai/test-entity/test-project/runs/abcdefgh"}
-    )
+    mock_args |= {
+        "job": None,
+        "uri": "https://wandb.ai/test-entity/test-project/runs/abcdefgh",
+    }
     project = LaunchProject(**mock_args)
     assert project.build_required() is True
 

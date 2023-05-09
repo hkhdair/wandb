@@ -80,33 +80,31 @@ class AgentProcess:
             self._proc.join()
             return True
         try:
-            finished = self._finished_q.get(False, 0)
-            if finished:
+            if finished := self._finished_q.get(False, 0):
                 return True
         except queue.Empty:
             pass
         return
 
     def wait(self):
-        if self._popen:
-            # if on windows, wait() will block and we wont be able to interrupt
-            if platform.system() == "Windows":
-                try:
-                    while True:
-                        p = self._popen.poll()
-                        if p is not None:
-                            return p
-                        time.sleep(1)
-                except KeyboardInterrupt:
-                    raise
-            return self._popen.wait()
-        return self._proc.join()
+        if not self._popen:
+            return self._proc.join()
+        # if on windows, wait() will block and we wont be able to interrupt
+        if platform.system() == "Windows":
+            try:
+                while True:
+                    p = self._popen.poll()
+                    if p is not None:
+                        return p
+                    time.sleep(1)
+            except KeyboardInterrupt:
+                raise
+        return self._popen.wait()
 
     def kill(self):
         if self._popen:
             return self._popen.kill()
-        pid = self._proc.pid
-        if pid:
+        if pid := self._proc.pid:
             ret = os.kill(pid, signal.SIGKILL)
             self._proc_killed = True
             return ret
@@ -186,13 +184,9 @@ class Agent:
         )
 
     def run(self):  # noqa: C901
-        # TODO: catch exceptions, handle errors, show validation warnings, and make more generic
-        sweep_obj = self._api.sweep(self._sweep_id, "{}")
-        if sweep_obj:
-            sweep_yaml = sweep_obj.get("config")
-            if sweep_yaml:
-                sweep_config = yaml.safe_load(sweep_yaml)
-                if sweep_config:
+        if sweep_obj := self._api.sweep(self._sweep_id, "{}"):
+            if sweep_yaml := sweep_obj.get("config"):
+                if sweep_config := yaml.safe_load(sweep_yaml):
                     sweep_command = sweep_config.get("command")
                     if sweep_command and isinstance(sweep_command, list):
                         self._sweep_command = sweep_command
@@ -278,9 +272,9 @@ class Agent:
 
                 # TODO: send _server_responses
                 self._server_responses = []
-                for command in commands:
-                    self._server_responses.append(self._process_command(command))
-
+                self._server_responses.extend(
+                    self._process_command(command) for command in commands
+                )
         except KeyboardInterrupt:
             try:
                 wandb.termlog(
@@ -311,8 +305,7 @@ class Agent:
 
     def _process_command(self, command):
         logger.info(
-            "Agent received command: %s"
-            % (command["type"] if "type" in command else "Unknown")
+            f'Agent received command: {command["type"] if "type" in command else "Unknown"}'
         )
         response = {
             "id": command.get("id"),
@@ -320,16 +313,19 @@ class Agent:
         }
         try:
             command_type = command["type"]
-            if command_type == "run":
+            if (
+                command_type == "run"
+                or command_type != "stop"
+                and command_type != "exit"
+                and command_type == "resume"
+            ):
                 result = self._command_run(command)
             elif command_type == "stop":
                 result = self._command_stop(command)
             elif command_type == "exit":
                 result = self._command_exit(command)
-            elif command_type == "resume":
-                result = self._command_run(command)
             else:
-                raise AgentError("No such command: %s" % command_type)
+                raise AgentError(f"No such command: {command_type}")
             response["result"] = result
         except Exception:
             logger.exception("Exception while processing command: %s", command)
@@ -344,21 +340,23 @@ class Agent:
 
     def _command_run(self, command):
         logger.info(
-            "Agent starting run with config:\n"
-            + "\n".join(
-                ["\t{}: {}".format(k, v["value"]) for k, v in command["args"].items()]
+            (
+                "Agent starting run with config:\n"
+                + "\n".join(
+                    [f'\t{k}: {v["value"]}' for k, v in command["args"].items()]
+                )
             )
         )
         if self._in_jupyter:
             print(
-                "wandb: Agent Starting Run: {} with config:\n".format(
-                    command.get("run_id")
-                )
-                + "\n".join(
-                    [
-                        "\t{}: {}".format(k, v["value"])
-                        for k, v in command["args"].items()
-                    ]
+                (
+                    f'wandb: Agent Starting Run: {command.get("run_id")} with config:\n'
+                    + "\n".join(
+                        [
+                            f'\t{k}: {v["value"]}'
+                            for k, v in command["args"].items()
+                        ]
+                    )
                 )
             )
 
@@ -369,11 +367,9 @@ class Agent:
         sweep_id = os.environ.get(wandb.env.SWEEP_ID)
         # TODO(jhr): move into settings
         config_file = os.path.join(
-            "wandb", "sweep-" + sweep_id, "config-" + run_id + ".yaml"
+            "wandb", f"sweep-{sweep_id}", f"config-{run_id}.yaml"
         )
-        json_file = os.path.join(
-            "wandb", "sweep-" + sweep_id, "config-" + run_id + ".json"
-        )
+        json_file = os.path.join("wandb", f"sweep-{sweep_id}", f"config-{run_id}.json")
 
         os.environ[wandb.env.RUN_ID] = run_id
 
@@ -405,7 +401,7 @@ class Agent:
             sweep_vars["interpreter"] = ["python"]
             sweep_vars["program"] = [command["program"]]
             sweep_vars["args_json_file"] = [json_file]
-            if not platform.system() == "Windows":
+            if platform.system() != "Windows":
                 sweep_vars["env"] = ["/usr/bin/env"]
             command_list = []
             for c in sweep_command:
@@ -416,9 +412,7 @@ class Agent:
                 else:
                     command_list += [c]
             logger.info(
-                "About to run command: {}".format(
-                    " ".join('"%s"' % c if " " in c else c for c in command_list)
-                )
+                f"""About to run command: {" ".join(f'"{c}"' if " " in c else c for c in command_list)}"""
             )
             proc = AgentProcess(command=command_list, env=env)
         self._run_processes[run_id] = proc
@@ -468,7 +462,7 @@ class AgentApi:
 
     def command(self, command):
         command["origin"] = "local"
-        command["id"] = "local-%s" % self._command_id
+        command["id"] = f"local-{self._command_id}"
         self._command_id += 1
         resp_queue = self._multiproc_manager.Queue()
         command["resp_queue"] = resp_queue
@@ -487,8 +481,7 @@ def run_agent(
     sweep_id, function=None, in_jupyter=None, entity=None, project=None, count=None
 ):
     parts = dict(entity=entity, project=project, name=sweep_id)
-    err = sweep_utils.parse_sweep_id(parts)
-    if err:
+    if err := sweep_utils.parse_sweep_id(parts):
         wandb.termerror(err)
         return
     entity = parts.get("entity") or entity
@@ -504,9 +497,7 @@ def run_agent(
         os.environ[wandb.env.SWEEP_ID] = sweep_id
     logger.setLevel(logging.DEBUG)
     ch = logging.StreamHandler()
-    log_level = logging.DEBUG
-    if in_jupyter:
-        log_level = logging.ERROR
+    log_level = logging.ERROR if in_jupyter else logging.DEBUG
     ch.setLevel(log_level)
     formatter = logging.Formatter(
         "%(asctime)s - %(name)s - %(levelname)s - %(message)s"

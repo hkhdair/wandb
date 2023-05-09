@@ -114,8 +114,7 @@ def _internal_sender(
 
 @pytest.fixture()
 def _internal_context_keeper():
-    context_keeper = context.ContextKeeper()
-    yield context_keeper
+    yield context.ContextKeeper()
 
 
 @pytest.fixture()
@@ -142,8 +141,7 @@ def internal_sm(
 
 @pytest.fixture()
 def stopped_event():
-    stopped = threading.Event()
-    yield stopped
+    yield threading.Event()
 
 
 @pytest.fixture()
@@ -542,13 +540,15 @@ def check_server_up(
         server_is_up = check_server_health(
             base_url=base_url, endpoint=app_health_endpoint, num_retries=30
         )
-        if not server_is_up:
-            return False
-        # check that the fixture service is accessible
-        return check_server_health(
-            base_url=fixture_url, endpoint=fixture_health_endpoint, num_retries=30
+        return (
+            check_server_health(
+                base_url=fixture_url,
+                endpoint=fixture_health_endpoint,
+                num_retries=30,
+            )
+            if server_is_up
+            else False
         )
-
     return check_server_health(
         base_url=fixture_url, endpoint=fixture_health_endpoint, num_retries=10
     )
@@ -716,39 +716,39 @@ def relay_server(base_url):
 def wandb_init(user, test_settings, request):
     # mirror wandb.sdk.wandb_init.init args, overriding name and entity defaults
     def init(
-        job_type: Optional[str] = None,
-        dir: Optional[str] = None,
-        config: Union[Dict, str, None] = None,
-        project: Optional[str] = None,
-        entity: Optional[str] = None,
-        reinit: bool = None,
-        tags: Optional[Sequence] = None,
-        group: Optional[str] = None,
-        name: Optional[str] = None,
-        notes: Optional[str] = None,
-        magic: Union[dict, str, bool] = None,
-        config_exclude_keys: Optional[List[str]] = None,
-        config_include_keys: Optional[List[str]] = None,
-        anonymous: Optional[str] = None,
-        mode: Optional[str] = None,
-        allow_val_change: Optional[bool] = None,
-        resume: Optional[Union[bool, str]] = None,
-        force: Optional[bool] = None,
-        tensorboard: Optional[bool] = None,
-        sync_tensorboard: Optional[bool] = None,
-        monitor_gym: Optional[bool] = None,
-        save_code: Optional[bool] = None,
-        id: Optional[str] = None,
-        settings: Union[
-            "wandb.sdk.wandb_settings.Settings", Dict[str, Any], None
-        ] = None,
-    ):
+            job_type: Optional[str] = None,
+            dir: Optional[str] = None,
+            config: Union[Dict, str, None] = None,
+            project: Optional[str] = None,
+            entity: Optional[str] = None,
+            reinit: bool = None,
+            tags: Optional[Sequence] = None,
+            group: Optional[str] = None,
+            name: Optional[str] = None,
+            notes: Optional[str] = None,
+            magic: Union[dict, str, bool] = None,
+            config_exclude_keys: Optional[List[str]] = None,
+            config_include_keys: Optional[List[str]] = None,
+            anonymous: Optional[str] = None,
+            mode: Optional[str] = None,
+            allow_val_change: Optional[bool] = None,
+            resume: Optional[Union[bool, str]] = None,
+            force: Optional[bool] = None,
+            tensorboard: Optional[bool] = None,
+            sync_tensorboard: Optional[bool] = None,
+            monitor_gym: Optional[bool] = None,
+            save_code: Optional[bool] = None,
+            id: Optional[str] = None,
+            settings: Union[
+                "wandb.sdk.wandb_settings.Settings", Dict[str, Any], None
+            ] = None,
+        ):
         kwargs = dict(locals())
         # drop fixtures from kwargs
         for key in ("user", "test_settings", "request"):
             kwargs.pop(key, None)
         # merge settings from request with test_settings
-        request_settings = kwargs.pop("settings", dict())
+        request_settings = kwargs.pop("settings", {})
         kwargs["name"] = kwargs.pop("name", request.node.name)
 
         run = wandb.init(

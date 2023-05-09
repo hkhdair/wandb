@@ -80,7 +80,7 @@ class ParameterModule(nn.Module):
     def __init__(self):
         super().__init__()
         self.params = nn.ParameterList(
-            [nn.Parameter(torch.ones(10, 10)) for i in range(10)]
+            [nn.Parameter(torch.ones(10, 10)) for _ in range(10)]
         )
         self.otherparam = nn.Parameter(torch.Tensor(5))
 
@@ -105,7 +105,7 @@ class Sequence(nn.Module):
         h_t2 = dummy_torch_tensor((input.size(0), 51))
         c_t2 = dummy_torch_tensor((input.size(0), 51))
 
-        for _, input_t in enumerate(input.chunk(input.size(1), dim=1)):
+        for input_t in input.chunk(input.size(1), dim=1):
             h_t, c_t = self.lstm1(input_t, (h_t, c_t))
             h_t2, c_t2 = self.lstm2(h_t, (h_t2, c_t2))
             output = self.linear(h_t2)
@@ -178,7 +178,7 @@ def test_all_logging(relay_server, wandb_init):
 
     history = relay.context.get_run_history(run.id, include_private=True)
     assert history.shape == (n, 21)  # it's 21 instead of 20 since we add __run_id
-    assert history["_step"].to_list() == [i for i in range(3)]
+    assert history["_step"].to_list() == list(range(3))
     for i in range(n):
         assert len(history["parameters/fc2.bias"][i]["bins"]) == 65
         assert len(history["gradients/fc2.bias"][i]["bins"]) == 65

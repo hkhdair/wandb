@@ -273,13 +273,11 @@ def test_launch_add_default_specify(
     assert queued_run.project_queue == LAUNCH_DEFAULT_PROJECT
 
     for comm in relay.context.raw_data:
-        q = comm["request"].get("query")
-        # below should fail for non-existent default queue,
-        # then fallback to legacy method
-        if q and "mutation pushToRunQueueByName(" in str(q):
-            assert comm["response"].get("data", {}).get("pushToRunQueueByName") is None
-        elif q and "mutation pushToRunQueue(" in str(q):
-            assert comm["response"]["data"]["pushToRunQueue"] is not None
+        if q := comm["request"].get("query"):
+            if "mutation pushToRunQueueByName(" in str(q):
+                assert comm["response"].get("data", {}).get("pushToRunQueueByName") is None
+            elif "mutation pushToRunQueue(" in str(q):
+                assert comm["response"]["data"]["pushToRunQueue"] is not None
 
 
 def test_launch_add_default_specify_project_queue(
@@ -312,13 +310,11 @@ def test_launch_add_default_specify_project_queue(
     assert queued_run.project_queue == proj
 
     for comm in relay.context.raw_data:
-        q = comm["request"].get("query")
-        # below should fail for non-existent default queue,
-        # then fallback to legacy method
-        if q and "mutation pushToRunQueueByName(" in str(q):
-            assert comm["response"].get("data", {}).get("pushToRunQueueByName") is None
-        elif q and "mutation pushToRunQueue(" in str(q):
-            assert comm["response"]["data"]["pushToRunQueue"] is not None
+        if q := comm["request"].get("query"):
+            if "mutation pushToRunQueueByName(" in str(q):
+                assert comm["response"].get("data", {}).get("pushToRunQueueByName") is None
+            elif "mutation pushToRunQueue(" in str(q):
+                assert comm["response"]["data"]["pushToRunQueue"] is not None
 
 
 def test_push_to_runqueue_exists(
@@ -353,11 +349,11 @@ def test_push_to_runqueue_exists(
         run.finish()
 
     for comm in relay.context.raw_data:
-        q = comm["request"].get("query")
-        if q and "mutation pushToRunQueueByName(" in str(q):
-            assert comm["response"].get("data") is not None
-        elif q and "mutation pushToRunQueue(" in str(q):
-            raise Exception("should not be falling back to legacy here")
+        if q := comm["request"].get("query"):
+            if "mutation pushToRunQueueByName(" in str(q):
+                assert comm["response"].get("data") is not None
+            elif "mutation pushToRunQueue(" in str(q):
+                raise Exception("should not be falling back to legacy here")
 
 
 def test_push_to_default_runqueue_notexist(

@@ -32,7 +32,7 @@ def train(**kwargs):
     run = wandb.init()
     with run:
         c = dict(run.config)
-        run.name = "{}-{}-{}".format(c.get("param0"), c.get("param1"), c.get("param2"))
+        run.name = f'{c.get("param0")}-{c.get("param1")}-{c.get("param2")}'
         run_id = run.id
         print("SweepID", run.sweep_id)
         length = run.config.get("length", L)
@@ -46,7 +46,7 @@ def train(**kwargs):
                 time.sleep(delay)
             if POKE_LOCAL:
                 poke()
-    shutil.copyfile("wandb/debug.log", "wandb/debug-%s.log" % run_id)
+    shutil.copyfile("wandb/debug.log", f"wandb/debug-{run_id}.log")
 
 
 # WB-3321: check if sweeps work when a user uses os.chdir in sweep function
@@ -60,7 +60,7 @@ def train_and_check_chdir(**kwargs):
     run = wandb.init()
     with run:
         c = dict(run.config)
-        run.name = "{}-{}-{}".format(c.get("param0"), c.get("param1"), c.get("param2"))
+        run.name = f'{c.get("param0")}-{c.get("param1")}-{c.get("param2")}'
         print("SweepID", run.sweep_id)
         length = run.config.get("length", L)
         epochs = run.config.get("epochs", 27)
@@ -245,7 +245,7 @@ def main():
         print(f"Testing: {t}")
         f = all_tests.get(t)
         if f is None:
-            raise Exception("Unknown test: %s" % t)
+            raise Exception(f"Unknown test: {t}")
         if args.dryrun:
             continue
         if args.local and t == "grid_hyper":

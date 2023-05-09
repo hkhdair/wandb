@@ -38,7 +38,8 @@ def test_wb_value(live_mock_server, test_settings):
 
     type_mapping = data_types.WBValue.type_mapping()
     assert all(
-        [issubclass(type_mapping[key], data_types.WBValue) for key in type_mapping]
+        issubclass(type_mapping[key], data_types.WBValue)
+        for key in type_mapping
     )
 
     assert wbvalue == wbvalue
@@ -70,7 +71,6 @@ def test_reference_table_logging(
     run.log({"logged_table": t})
     run.log({"logged_table": t})
     run.finish()
-    assert True
 
 
 def test_reference_table_artifacts(
@@ -91,4 +91,3 @@ def test_reference_table_artifacts(
     run.log_artifact(art)
 
     run.finish()
-    assert True

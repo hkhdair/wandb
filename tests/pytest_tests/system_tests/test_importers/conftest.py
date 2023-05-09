@@ -64,10 +64,8 @@ def _make_run(
 
 def batched(n, iterable):
     i = iter(iterable)
-    batch = list(islice(i, n))
-    while batch:
+    while batch := list(islice(i, n)):
         yield batch
-        batch = list(islice(i, n))
 
 
 def batch_metrics(metrics, bs: int) -> Iterable[List[Metric]]:
@@ -75,10 +73,10 @@ def batch_metrics(metrics, bs: int) -> Iterable[List[Metric]]:
     for i, batch in enumerate(batched(bs, metrics)):
         batched_metrics = []
         for step, metric in enumerate(batch, start=i * bs):
-            for k, v in metric.items():
-                batched_metrics.append(
-                    Metric(k, v, step=step, timestamp=SECONDS_FROM_2023_01_01)
-                )
+            batched_metrics.extend(
+                Metric(k, v, step=step, timestamp=SECONDS_FROM_2023_01_01)
+                for k, v in metric.items()
+            )
         yield batched_metrics
 
 
@@ -142,7 +140,7 @@ def make_run(n_steps, mlflow_batch_size):
 
 
 def make_exp(n_runs, n_steps, mlflow_batch_size):
-    name = "Experiment " + str(uuid.uuid4())
+    name = f"Experiment {str(uuid.uuid4())}"
     mlflow.set_experiment(name)
 
     # Can't use ProcessPoolExecutor -- it seems to always fail in tests!
@@ -273,11 +271,9 @@ def mlflow_server(mlflow_backend, mlflow_artifacts_destination):
         mlflow_artifacts_destination,
     ]
     process = subprocess.Popen(start_cmd)  # process
-    healthy = check_mlflow_server_health(
+    if healthy := check_mlflow_server_health(
         modified_base_url, MLFLOW_HEALTH_ENDPOINT, num_retries=30
-    )
-
-    if healthy:
+    ):
         yield modified_base_url
     else:
         raise Exception("MLflow server is not healthy")

@@ -87,7 +87,7 @@ def test_resume_error_must(mocked_run, test_settings, mock_server, backend_inter
 
 def test_output(mocked_run, mock_server, backend_interface):
     with backend_interface() as interface:
-        for i in range(100):
+        for _ in range(100):
             interface.publish_output("stdout", "\rSome recurring line")
         interface.publish_output("stdout", "\rFinal line baby\n")
 
@@ -107,9 +107,7 @@ def test_sync_spell_run(mocked_run, mock_server, backend_interface, parse_ctx):
         # Check that we pinged spells API
         assert mock_server.ctx["spell_data"] == {
             "access_token": None,
-            "url": "{}/mock_server_entity/test/runs/{}".format(
-                mocked_run._settings.base_url, mocked_run.id
-            ),
+            "url": f"{mocked_run._settings.base_url}/mock_server_entity/test/runs/{mocked_run.id}",
         }
     finally:
         del os.environ["SPELL_RUN_URL"]

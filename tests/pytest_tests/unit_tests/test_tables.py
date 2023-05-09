@@ -11,7 +11,7 @@ def test_basic_ndx():
     table = wandb.Table(columns=["fi", "c"])
     for _ndx, _ in table_a.iterrows():
         table.add_data(_ndx, "x")
-    assert all([row[0]._table == table_a for row in table.data])
+    assert all(row[0]._table == table_a for row in table.data)
 
     # Adding is supported
     table.add_data(3, "c")
@@ -23,7 +23,7 @@ def test_basic_ndx():
 
     # Assert that the data in this column is valid, but also properly typed
     assert [row[0] for row in table.data] == [0, 1, 3, 3]
-    assert all([row[0] is None or row[0]._table == table_a for row in table.data])
+    assert all(row[0] is None or row[0]._table == table_a for row in table.data)
 
 
 def test_pk_cast(use_helper=False):
@@ -40,7 +40,8 @@ def test_pk_cast(use_helper=False):
         table.cast("id", wandb.data_types._PrimaryKeyType())
 
     assert all(
-        [row[0]._table == table and row[0]._col_name == "id" for row in table.data]
+        row[0]._table == table and row[0]._col_name == "id"
+        for row in table.data
     )
 
     # Adding is supported
@@ -79,7 +80,7 @@ def test_pk_cast(use_helper=False):
             table.cast("id", wandb.data_types._PrimaryKeyType())
 
     # Assert that the table was not modified
-    assert all([row[0].__class__ == int for row in table.data])
+    assert all(row[0].__class__ == int for row in table.data)
     assert not isinstance(
         table._column_types.params["type_map"]["id"],
         wandb.data_types._PrimaryKeyType,
@@ -129,7 +130,8 @@ def test_fk_cast(use_helper=False):
     # Assert that the data in this column is valid, but also properly typed
     assert [row[0] for row in table.data] == ["1", "2", "3", "3"]
     assert all(
-        [row[0]._table == table_a and row[0]._col_name == "id" for row in table.data]
+        row[0]._table == table_a and row[0]._col_name == "id"
+        for row in table.data
     )
     assert isinstance(
         table._column_types.params["type_map"]["fk"],
@@ -145,7 +147,7 @@ def test_fk_cast(use_helper=False):
             table.cast("fk", wandb.data_types._ForeignKeyType(table_a, "id"))
 
     # Assert that the table was not modified
-    assert all([row[0].__class__ == int for row in table.data])
+    assert all(row[0].__class__ == int for row in table.data)
     assert not isinstance(
         table._column_types.params["type_map"]["fk"],
         wandb.data_types._ForeignKeyType,
@@ -172,10 +174,9 @@ def test_fk_from_pk_local_draft():
     # Assert that the data in this column is valid, but also properly typed
     assert [row[0] for row in table.data] == ["1", "2", "3"]
     assert all(
-        [
-            row[0] is None or (row[0]._table == table_a and row[0]._col_name == "id")
-            for row in table.data
-        ]
+        row[0] is None
+        or (row[0]._table == table_a and row[0]._col_name == "id")
+        for row in table.data
     )
 
     table = wandb.Table(columns=["fk", "col_2"], data=[["1", "c"], ["2", "d"]])
@@ -186,10 +187,9 @@ def test_fk_from_pk_local_draft():
     # Assert that the data in this column is valid, but also properly typed
     assert [row[0] for row in table.data] == ["1", "2", "1"]
     assert all(
-        [
-            row[0] is None or (row[0]._table == table_a and row[0]._col_name == "id")
-            for row in table.data
-        ]
+        row[0] is None
+        or (row[0]._table == table_a and row[0]._col_name == "id")
+        for row in table.data
     )
 
 
@@ -236,7 +236,6 @@ def test_loading_from_json_with_mixed_types():
 
     artifact = wandb.Artifact("my_artifact", type="dataset")
     _ = wandb.Table.from_json(json_obj, artifact)
-    assert True
 
 
 def test_datetime_conversion():

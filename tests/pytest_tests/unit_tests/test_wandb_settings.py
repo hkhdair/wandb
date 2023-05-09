@@ -756,7 +756,7 @@ def test_preprocess_base_url(url, processed_url):
     ],
 )
 def test_preprocess_bool_settings(setting: str):
-    with mock.patch.dict(os.environ, {"WANDB_" + setting.upper(): "true"}):
+    with mock.patch.dict(os.environ, {f"WANDB_{setting.upper()}": "true"}):
         s = Settings()
         s._apply_env_vars(environ=os.environ)
         assert s[setting] is True
@@ -773,7 +773,7 @@ def test_preprocess_bool_settings(setting: str):
     ],
 )
 def test_preprocess_dict_settings(setting: str, value: str):
-    with mock.patch.dict(os.environ, {"WANDB_" + setting.upper(): value}):
+    with mock.patch.dict(os.environ, {f"WANDB_{setting.upper()}": value}):
         s = Settings()
         s._apply_env_vars(environ=os.environ)
         assert s[setting] == json.loads(value)

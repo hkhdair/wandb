@@ -29,26 +29,15 @@ def test_display(mock_run):
     assert run.display() is False
 
 
-@pytest.mark.parametrize(
-    "config, sweep_config, expected_config",
-    [
-        (
-            dict(param1=2, param2=4),
-            dict(),
-            dict(param1=2, param2=4),
-        ),
-        (
+@pytest.mark.parametrize("config, sweep_config, expected_config", [(dict(param1=2, param2=4), {}, dict(param1=2, param2=4)), (
             dict(param1=2, param2=4),
             dict(param3=9),
             dict(param1=2, param2=4, param3=9),
-        ),
-        (
+        ), (
             dict(param1=2, param2=4),
             dict(param2=8, param3=9),
             dict(param1=2, param2=8, param3=9),
-        ),
-    ],
-)
+        )])
 def test_run_config(mock_run, config, sweep_config, expected_config):
     run = mock_run(config=config, sweep_config=sweep_config)
     assert dict(run.config) == expected_config
@@ -182,8 +171,7 @@ def test_run_log_mp_warn(mock_run, test_settings, capsys):
     with mock.patch.dict("os.environ", {"WANDB_DISABLE_SERVICE": "true"}):
         test_settings._apply_env_vars(os.environ)
         run = mock_run(settings=test_settings)
-        run._init_pid = os.getpid()
-        run._init_pid += 1
+        run._init_pid = os.getpid() + 1
         run.log(dict(this=1))
     _, stderr = capsys.readouterr()
     assert (

@@ -7,15 +7,12 @@ import json
 class Database:
     def get_dataset(self, dataset):
         # load sample dataset in JSON format
-        file_name = dataset + ".json"
-        with open("prodigy_test_resources/" + file_name) as f:
-            data = json.load(f)
-            return data
+        file_name = f"{dataset}.json"
+        with open(f"prodigy_test_resources/{file_name}") as f:
+            return json.load(f)
         return []
 
 
 class Connect:
     def connect(self):
-        # initialize sample database
-        database = Database()
-        return database
+        return Database()

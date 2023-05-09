@@ -108,9 +108,7 @@ def test_model(
 
 
 packages_to_install = ["scikit-learn"]
-# probe wandb dev build if needed (otherwise released wandb will be used)
-wandb_package = wandb_probe_package()
-if wandb_package:
+if wandb_package := wandb_probe_package():
     print("INFO: wandb_probe_package found:", wandb_package)
     packages_to_install.append(wandb_package)
 preprocess_data = components.create_component_from_func(

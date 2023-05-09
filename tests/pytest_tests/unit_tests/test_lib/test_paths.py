@@ -158,7 +158,7 @@ def test_logical_path_acts_like_posix_path():
         assert lp.parts == ppp.parts
         assert not lp.is_reserved()
         if lp.is_absolute():
-            assert lp.root == "/" or lp.root == "//"
+            assert lp.root in ["/", "//"]
             assert lp.as_uri() == ppp.as_uri()
             assert not lp.relative_to(lp.root).is_absolute()
         else:

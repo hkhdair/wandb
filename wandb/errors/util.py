@@ -49,9 +49,12 @@ class ProtobufErrorHandler:
         if not isinstance(exc, Error):
             raise ValueError("exc must be a subclass of wandb.errors.Error")
 
-        code = None
-        for subclass in type(exc).__mro__:
-            if subclass in from_exception_map:
-                code = from_exception_map[subclass]
-                break
+        code = next(
+            (
+                from_exception_map[subclass]
+                for subclass in type(exc).__mro__
+                if subclass in from_exception_map
+            ),
+            None,
+        )
         return pb.ErrorInfo(code=code, message=str(exc))

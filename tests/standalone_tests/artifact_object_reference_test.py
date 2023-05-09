@@ -13,16 +13,13 @@ from wandb.sdk.interface import artifacts
 
 WANDB_PROJECT_ENV = os.environ.get("WANDB_PROJECT")
 if WANDB_PROJECT_ENV is None:
-    WANDB_PROJECT = "test__" + str(round(time.time()) % 1000000)
+    WANDB_PROJECT = f"test__{str(round(time.time()) % 1000000)}"
 else:
     WANDB_PROJECT = WANDB_PROJECT_ENV
 os.environ["WANDB_PROJECT"] = WANDB_PROJECT
 
 WANDB_SILENT_ENV = os.environ.get("WANDB_SILENT")
-if WANDB_SILENT_ENV is None:
-    WANDB_SILENT = "true"
-else:
-    WANDB_SILENT = WANDB_SILENT_ENV
+WANDB_SILENT = "true" if WANDB_SILENT_ENV is None else WANDB_SILENT_ENV
 os.environ["WANDB_SILENT"] = WANDB_SILENT
 
 columns = [
@@ -222,7 +219,7 @@ def _make_wandb_table():
         ]
     )
     table = wandb.Table(
-        columns=[c for c in columns[:-1]],
+        columns=list(columns[:-1]),
         data=[
             [
                 1,
@@ -315,10 +312,10 @@ def test_artifact_add_reference_via_url():
     middle_artifact_path = "middle/artifact/path/"
     downstream_artifact_path = "downstream/artifact/path/"
 
-    upstream_local_file_path = upstream_local_path + "file.txt"
-    upstream_artifact_file_path = upstream_artifact_path + "file.txt"
-    middle_artifact_file_path = middle_artifact_path + "file.txt"
-    downstream_artifact_file_path = downstream_artifact_path + "file.txt"
+    upstream_local_file_path = f"{upstream_local_path}file.txt"
+    upstream_artifact_file_path = f"{upstream_artifact_path}file.txt"
+    middle_artifact_file_path = f"{middle_artifact_path}file.txt"
+    downstream_artifact_file_path = f"{downstream_artifact_path}file.txt"
 
     file_text = "Luke, I am your Father!!!!!"
     # Create a super important file
@@ -336,7 +333,7 @@ def test_artifact_add_reference_via_url():
     # Create an middle artifact with such file referenced (notice no need to download)
     with wandb.init() as run:
         artifact = wandb.Artifact(middle_artifact_name, "database")
-        upstream_artifact = run.use_artifact(upstream_artifact_name + ":latest")
+        upstream_artifact = run.use_artifact(f"{upstream_artifact_name}:latest")
         artifact.add_reference(
             f"wandb-artifact://{_b64_to_hex_id(upstream_artifact.id)}/{str(upstream_artifact_file_path)}",
             middle_artifact_file_path,
@@ -346,7 +343,7 @@ def test_artifact_add_reference_via_url():
     # Create a downstream artifact that is referencing the middle's reference
     with wandb.init() as run:
         artifact = wandb.Artifact(downstream_artifact_name, "database")
-        middle_artifact = run.use_artifact(middle_artifact_name + ":latest")
+        middle_artifact = run.use_artifact(f"{middle_artifact_name}:latest")
         artifact.add_reference(
             f"wandb-artifact://{_b64_to_hex_id(middle_artifact.id)}/{str(middle_artifact_file_path)}",
             downstream_artifact_file_path,
@@ -361,7 +358,7 @@ def test_artifact_add_reference_via_url():
 
     # Finally, use the artifact (download it) and enforce that the file is where we want it!
     with wandb.init() as run:
-        downstream_artifact = run.use_artifact(downstream_artifact_name + ":latest")
+        downstream_artifact = run.use_artifact(f"{downstream_artifact_name}:latest")
         downstream_path = downstream_artifact.download()
         with open(os.path.join(downstream_path, downstream_artifact_file_path)) as file:
             assert file.read() == file_text
@@ -385,10 +382,10 @@ def test_add_reference_via_artifact_entry():
     middle_artifact_path = "middle/artifact/path/"
     downstream_artifact_path = "downstream/artifact/path/"
 
-    upstream_local_file_path = upstream_local_path + "file.txt"
-    upstream_artifact_file_path = upstream_artifact_path + "file.txt"
-    middle_artifact_file_path = middle_artifact_path + "file.txt"
-    downstream_artifact_file_path = downstream_artifact_path + "file.txt"
+    upstream_local_file_path = f"{upstream_local_path}file.txt"
+    upstream_artifact_file_path = f"{upstream_artifact_path}file.txt"
+    middle_artifact_file_path = f"{middle_artifact_path}file.txt"
+    downstream_artifact_file_path = f"{downstream_artifact_path}file.txt"
 
     file_text = "Luke, I am your Father!!!!!"
     # Create a super important file
@@ -406,7 +403,7 @@ def test_add_reference_via_artifact_entry():
     # Create an middle artifact with such file referenced (notice no need to download)
     with wandb.init() as run:
         artifact = wandb.Artifact(middle_artifact_name, "database")
-        upstream_artifact = run.use_artifact(upstream_artifact_name + ":latest")
+        upstream_artifact = run.use_artifact(f"{upstream_artifact_name}:latest")
         artifact.add_reference(
             upstream_artifact.get_path(upstream_artifact_file_path),
             middle_artifact_file_path,
@@ -416,7 +413,7 @@ def test_add_reference_via_artifact_entry():
     # Create a downstream artifact that is referencing the middle's reference
     with wandb.init() as run:
         artifact = wandb.Artifact(downstream_artifact_name, "database")
-        middle_artifact = run.use_artifact(middle_artifact_name + ":latest")
+        middle_artifact = run.use_artifact(f"{middle_artifact_name}:latest")
         artifact.add_reference(
             middle_artifact.get_path(middle_artifact_file_path),
             downstream_artifact_file_path,
@@ -431,7 +428,7 @@ def test_add_reference_via_artifact_entry():
 
     # Finally, use the artifact (download it) and enforce that the file is where we want it!
     with wandb.init() as run:
-        downstream_artifact = run.use_artifact(downstream_artifact_name + ":latest")
+        downstream_artifact = run.use_artifact(f"{downstream_artifact_name}:latest")
         downstream_path = downstream_artifact.download()
         downstream_path = (
             downstream_artifact.download()
@@ -594,7 +591,7 @@ def test_table_slice_reference_artifact():
             assert len(d1[ndx]) == len(d2[ndx])
             for i in range(len(d1[ndx])):
                 eq = d1[ndx][i] == d2[ndx][i]
-                if isinstance(eq, list) or isinstance(eq, np.ndarray):
+                if isinstance(eq, (list, np.ndarray)):
                     assert np.all(eq)
                 else:
                     assert eq
@@ -630,7 +627,7 @@ def assert_media_obj_referential_equality(obj):
 
     assert obj1 == obj
 
-    target_path = os.path.join(orig_dir, "obj." + type(obj)._log_type + ".json")
+    target_path = os.path.join(orig_dir, f"obj.{type(obj)._log_type}.json")
     assert os.path.isfile(target_path)
 
     with wandb.init() as run:

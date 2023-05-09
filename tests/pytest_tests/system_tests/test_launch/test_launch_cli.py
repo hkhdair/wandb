@@ -64,9 +64,8 @@ def test_launch_build_succeeds(
         if not kwargs.get("build"):
             raise Exception(kwargs)
 
-        if "--repository" in args:
-            if not kwargs.get("repository"):
-                raise Exception(kwargs)
+        if "--repository" in args and not kwargs.get("repository"):
+            raise Exception(kwargs)
 
         if args[3]:  # config
             assert args[3] == override_config

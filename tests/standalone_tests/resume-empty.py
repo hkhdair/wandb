@@ -12,8 +12,7 @@ def main():
     print("config", wandb.config)
     print("resumed", run.resumed)
     config_len = len(wandb.config.keys())
-    conf_update = {}
-    conf_update[str(config_len)] = random.random()
+    conf_update = {str(config_len): random.random()}
     wandb.config.update(conf_update)
 
 

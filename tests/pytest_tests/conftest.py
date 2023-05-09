@@ -157,7 +157,7 @@ def env_teardown():
     wandb.teardown()
     yield
     wandb.teardown()
-    if not os.environ.get("CI") == "true":
+    if os.environ.get("CI") != "true":
         # TODO: uncomment this for prod? better make controllable with an env var
         # subprocess.run(["wandb", "server", "stop"])
         pass
@@ -200,7 +200,7 @@ def mocked_backend(mocked_interface: InterfaceQueue) -> Generator[object, None, 
 
 def dict_factory():
     def helper():
-        return dict()
+        return {}
 
     return helper
 
@@ -231,7 +231,7 @@ def mock_run(test_settings, mocked_backend) -> Generator[Callable, None, None]:
     from wandb.sdk.lib.module import unset_globals
 
     def mock_run_fn(use_magic_mock=False, **kwargs: Any) -> "wandb.sdk.wandb_run.Run":
-        kwargs_settings = kwargs.pop("settings", dict())
+        kwargs_settings = kwargs.pop("settings", {})
         kwargs_settings = {
             **{
                 "run_id": runid.generate_id(),

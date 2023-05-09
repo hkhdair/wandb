@@ -28,10 +28,7 @@ def mocked_module(monkeypatch):
         mocked_module = MagicMock()
 
         def get_module(mod):
-            if mod == module:
-                return mocked_module
-            else:
-                return orig_get_module(mod)
+            return mocked_module if mod == module else orig_get_module(mod)
 
         monkeypatch.setattr(wandb.util, "get_module", get_module)
         return mocked_module
@@ -102,8 +99,7 @@ class WandbNotebookClient(NotebookClient):
     def cell_output(self, cell_index: int) -> List[Dict[str, Any]]:
         """Return a cell's outputs."""
         idx = cell_index + 1
-        outputs = self.nb.cells[idx]["outputs"]
-        return outputs
+        return self.nb.cells[idx]["outputs"]
 
     def cell_output_html(self, cell_index: int) -> str:
         """Return a cell's HTML outputs concatenated into a string."""

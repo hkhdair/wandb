@@ -144,24 +144,23 @@ class PolicyLive(FileEventHandler):
             return 20 * 60
 
     def should_update(self) -> bool:
-        if self._last_uploaded_time is not None:
-            # Check rate limit by time elapsed
-            time_elapsed = time.time() - self._last_uploaded_time
-            # if more than 15 seconds has passed potentially upload it
-            if time_elapsed < self.RATE_LIMIT_SECONDS:
+        if self._last_uploaded_time is None:
+            # if the file has never been uploaded, we'll upload it
+            return True
+        # Check rate limit by time elapsed
+        time_elapsed = time.time() - self._last_uploaded_time
+        # if more than 15 seconds has passed potentially upload it
+        if time_elapsed < self.RATE_LIMIT_SECONDS:
+            return False
+
+        # Check rate limit by size increase
+        if float(self._last_uploaded_size) > 0:
+            size_increase = self.current_size / float(self._last_uploaded_size)
+            if size_increase < self.RATE_LIMIT_SIZE_INCREASE:
                 return False
-
-            # Check rate limit by size increase
-            if float(self._last_uploaded_size) > 0:
-                size_increase = self.current_size / float(self._last_uploaded_size)
-                if size_increase < self.RATE_LIMIT_SIZE_INCREASE:
-                    return False
-            return time_elapsed > (
-                self._min_wait_time or self.min_wait_for_size(self.current_size)
-            )
-
-        # if the file has never been uploaded, we'll upload it
-        return True
+        return time_elapsed > (
+            self._min_wait_time or self.min_wait_for_size(self.current_size)
+        )
 
     def on_modified(self, force: bool = False) -> None:
         if self.current_size == 0:
@@ -263,9 +262,9 @@ class DirWatcher:
             os.path.join(self._dir, "*/.*"),
         ]
         # TODO: pipe in actual settings
-        for glb in self._settings.ignore_globs:
-            file_event_handler._ignore_patterns.append(os.path.join(self._dir, glb))
-
+        file_event_handler._ignore_patterns.extend(
+            os.path.join(self._dir, glb) for glb in self._settings.ignore_globs
+        )
         return file_event_handler
 
     def _on_file_created(self, event: "wd_events.FileCreatedEvent") -> None:
@@ -273,11 +272,9 @@ class DirWatcher:
         if os.path.isdir(event.src_path):
             return None
         self._file_count += 1
-        # We do the directory scan less often as it grows
         if self._file_count % 100 == 0:
-            emitter = self.emitter
-            if emitter:
-                emitter._timeout = int(self._file_count / 100) + 1
+            if emitter := self.emitter:
+                emitter._timeout = self._file_count // 100 + 1
         save_name = LogicalPath(os.path.relpath(event.src_path, self._dir))
         self._get_file_event_handler(event.src_path, save_name).on_modified()
 

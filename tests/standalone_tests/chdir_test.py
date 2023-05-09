@@ -18,8 +18,6 @@ def main(argv):
         os.makedirs("./chdir_test")
     except Exception as e:
         print(f"Failed to create directory: {e}")
-        pass
-
     os.chdir("./chdir_test")
     # log some table data, which is saved in the media folder
     pr_data = [

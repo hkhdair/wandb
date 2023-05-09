@@ -6,11 +6,11 @@ from wandb.proto import wandb_internal_pb2 as pb
 
 
 def _gen_history():
-    history = []
-    history.append(dict(step=0, data=dict(v1=1, v2=2, v3="dog", mystep=1)))
-    history.append(dict(step=1, data=dict(v1=3, v2=8, v3="cat", mystep=2)))
-    history.append(dict(step=2, data=dict(v1=2, v2=3, v3="pizza", mystep=3)))
-    return history
+    return [
+        dict(step=0, data=dict(v1=1, v2=2, v3="dog", mystep=1)),
+        dict(step=1, data=dict(v1=3, v2=8, v3="cat", mystep=2)),
+        dict(step=2, data=dict(v1=2, v2=3, v3="pizza", mystep=3)),
+    ]
 
 
 def _make_metrics(mitems):
@@ -48,16 +48,14 @@ def test_metric_best(publish_util):
 
 
 def test_metric_glob_twice_norm(publish_util):
-    history = []
-    history.append(
+    history = [
         dict(
             step=0,
             data=dict(
                 metric=1,
             ),
         )
-    )
-
+    ]
     m1a = pb.MetricRecord(glob_name="*")
     m1a.summary.best = True
     m1a.summary.max = True

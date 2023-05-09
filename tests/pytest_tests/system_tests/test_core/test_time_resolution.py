@@ -23,7 +23,9 @@ def test_log(relay_server, wandb_init):
     assert any(history["_timestamp"] % 1 > 0)
     assert any(history["_runtime"] % 1 > 0)
     assert all(before <= history["_timestamp"]) and all(history["_timestamp"] <= after)
-    assert all(0 <= history["_runtime"]) and all(history["_runtime"] <= after - before)
+    assert all(history["_runtime"] >= 0) and all(
+        history["_runtime"] <= after - before
+    )
 
 
 @pytest.mark.xfail(reason="TODO: this test is non-deterministic and sometimes fails")
@@ -43,4 +45,4 @@ def test_stats(relay_server, wandb_init):
     # assert any(stats["_timestamp"])
     # assert any(stats["_runtime"])
     assert all(before <= stats["_timestamp"]) and all(stats["_timestamp"] <= after)
-    assert all(0 <= stats["_runtime"]) and all(stats["_runtime"] <= after - before)
+    assert all(stats["_runtime"] >= 0) and all(stats["_runtime"] <= after - before)

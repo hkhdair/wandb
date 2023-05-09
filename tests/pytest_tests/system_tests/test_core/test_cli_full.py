@@ -29,11 +29,9 @@ def empty_netrc(monkeypatch):
 
 def debug_result(result, prefix=None):
     prefix = prefix or ""
-    print("DEBUG({}) {} = {}".format(prefix, "out", result.output))
-    print("DEBUG({}) {} = {}".format(prefix, "exc", result.exception))
-    print(
-        "DEBUG({}) {} = {}".format(prefix, "tb", traceback.print_tb(result.exc_info[2]))
-    )
+    print(f"DEBUG({prefix}) out = {result.output}")
+    print(f"DEBUG({prefix}) exc = {result.exception}")
+    print(f"DEBUG({prefix}) tb = {traceback.print_tb(result.exc_info[2])}")
 
 
 @pytest.mark.xfail(reason="This test is flakey on CI")
@@ -136,7 +134,7 @@ def test_sync_tensorboard(
     tb_file_name,
     history_length,
 ):
-    with relay_server() as relay, runner.isolated_filesystem():
+    with (relay_server() as relay, runner.isolated_filesystem()):
         project_name = "test_sync_tensorboard"
         run = wandb.init(project=project_name)
         run.finish()
@@ -154,7 +152,7 @@ def test_sync_tensorboard(
 
         # Check the no sync tensorboard flag
         result = runner.invoke(cli.sync, [".", "--no-sync-tensorboard"])
-        assert "Skipping directory: {}\n".format(os.path.abspath(".")) in result.output
+        assert f'Skipping directory: {os.path.abspath(".")}\n' in result.output
         assert tb_file_name in os.listdir(".")
 
 

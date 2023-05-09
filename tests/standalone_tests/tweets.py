@@ -65,10 +65,7 @@ def main():
         }
     )
 
-    # Confusion Matrix
-    class_ind_map = {}
-    for i, class_name in enumerate(nb.classes_):
-        class_ind_map[class_name] = i
+    class_ind_map = {class_name: i for i, class_name in enumerate(nb.classes_)}
     y_pred_inds = [class_ind_map[class_name] for class_name in y_pred]
     y_true_inds = [class_ind_map[class_name] for class_name in y_test]
     # test workflow with classes

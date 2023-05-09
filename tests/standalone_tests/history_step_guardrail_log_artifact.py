@@ -26,7 +26,6 @@ def func():
 
     api = wandb.Api()
     api.artifact(f"{entity}/{project}/boom-name-{run_id}:v0")
-    assert True
 
 
 if __name__ == "__main__":

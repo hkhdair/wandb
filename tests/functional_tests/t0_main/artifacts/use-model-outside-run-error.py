@@ -9,7 +9,7 @@ def main():
         with wandb.init() as run:
             wandb.log({"metric": 5})
             artifact = wandb.Artifact("test-artifact", "test-type")
-            with open(tmpdir + "/boom.txt", "w") as f:
+            with open(f"{tmpdir}/boom.txt", "w") as f:
                 f.write("testing")
 
             local_path = f"{tmpdir}/boom.txt"

@@ -9,16 +9,13 @@ from PIL import Image
 
 WANDB_PROJECT_ENV = os.environ.get("WANDB_PROJECT")
 if WANDB_PROJECT_ENV is None:
-    WANDB_PROJECT = "test__" + str(round(time.time()) % 1000000)
+    WANDB_PROJECT = f"test__{str(round(time.time()) % 1000000)}"
 else:
     WANDB_PROJECT = WANDB_PROJECT_ENV
 os.environ["WANDB_PROJECT"] = WANDB_PROJECT
 
 WANDB_SILENT_ENV = os.environ.get("WANDB_SILENT")
-if WANDB_SILENT_ENV is None:
-    WANDB_SILENT = "true"
-else:
-    WANDB_SILENT = WANDB_SILENT_ENV
+WANDB_SILENT = "true" if WANDB_SILENT_ENV is None else WANDB_SILENT_ENV
 os.environ["WANDB_SILENT"] = WANDB_SILENT
 
 NUM_EXAMPLES = 10
@@ -100,17 +97,17 @@ def _check_train_ids():
 
 def get_train_image_path(ndx):
     _check_train_ids()
-    return os.path.join(train_dir, train_ids[ndx] + ".jpg")
+    return os.path.join(train_dir, f"{train_ids[ndx]}.jpg")
 
 
 def get_color_label_image_path(ndx):
     _check_train_ids()
-    return os.path.join(color_labels_dir, train_ids[ndx] + "_train_color.png")
+    return os.path.join(color_labels_dir, f"{train_ids[ndx]}_train_color.png")
 
 
 def get_label_image_path(ndx):
     _check_train_ids()
-    return os.path.join(labels_dir, train_ids[ndx] + "_train_id.png")
+    return os.path.join(labels_dir, f"{train_ids[ndx]}_train_id.png")
 
 
 def get_dominant_id_ndx(np_image):

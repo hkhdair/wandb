@@ -13,9 +13,7 @@ def main():
 
     run = wandb.init()
     for i in range(args.num_epochs):
-        data = {}
-        for j in range(args.num_scalers):
-            data[f"m-{j}"] = j * i
+        data = {f"m-{j}": j * i for j in range(args.num_scalers)}
         wandb.log(data)
     run.finish()
 

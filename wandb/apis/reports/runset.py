@@ -47,8 +47,7 @@ class Runset(Base):
         obj = cls()
         obj._spec = spec
 
-        project = spec.get("project")
-        if project:
+        if project := spec.get("project"):
             obj.entity = project.get(
                 "entityName", coalesce(PublicApi().default_entity, "")
             )

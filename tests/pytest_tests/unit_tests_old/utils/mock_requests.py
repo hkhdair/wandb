@@ -147,7 +147,7 @@ class RequestsMock:
         key = parts[0].split("/")[-1]
         if len(parts) > 1:
             # To make assertions easier, we remove the run from storage requests
-            key = key + "?" + parts[1].split("&run=")[0]
+            key = f"{key}?" + parts[1].split("&run=")[0]
         with self._lock:
             # Azure tests use "storage" as the final path of their requests
             if key == "storage":
@@ -157,8 +157,7 @@ class RequestsMock:
 
     def _inject(self, method, url, kwargs):
         pre_request = dict(method=method, url=url, kwargs=kwargs)
-        inject = InjectRequestsParse(self.ctx).find(pre_request=pre_request)
-        if inject:
+        if inject := InjectRequestsParse(self.ctx).find(pre_request=pre_request):
             if inject.requests_error:
                 if inject.requests_error is True:
                     raise requests.exceptions.RetryError()
@@ -187,7 +186,7 @@ class RequestsMock:
         elif method.lower() == "put":
             return self.put(url, **kwargs)
         else:
-            message = "Request method not implemented: %s" % method
+            message = f"Request method not implemented: {method}"
             raise requests.RequestException(message)
 
     def __repr__(self):
@@ -255,28 +254,27 @@ class InjectRequestsParse:
                 if query_str != req_qs:
                     # print("NOMATCH", query_str, req_qs)
                     continue
-            if path_suffix:
-                if request_path.endswith(path_suffix):
-                    requests_error = r.get("requests_error")
-                    response = r.get("response")
-                    http_status = r.get("http_status")
-                    # print("INJECT_REQUEST: match =", r, requests_error, response, http_status)
-                    #  requests_error is for pre_request checks only
-                    if requests_error and not pre_request:
+            if path_suffix and request_path.endswith(path_suffix):
+                requests_error = r.get("requests_error")
+                response = r.get("response")
+                http_status = r.get("http_status")
+                # print("INJECT_REQUEST: match =", r, requests_error, response, http_status)
+                #  requests_error is for pre_request checks only
+                if requests_error and not pre_request:
+                    continue
+                if count is not None:
+                    if count == 0:
                         continue
-                    if count is not None:
-                        if count == 0:
-                            continue
-                        match["count"] = count - 1
-                    action = InjectRequestsAction()
-                    if response:
-                        action.response = response
-                    if http_status:
-                        action.http_status = http_status
-                    if requests_error:
-                        action.requests_error = requests_error
-                    # print("INJECT_REQUEST: action =", action)
-                    return action
+                    match["count"] = count - 1
+                action = InjectRequestsAction()
+                if response:
+                    action.response = response
+                if http_status:
+                    action.http_status = http_status
+                if requests_error:
+                    action.requests_error = requests_error
+                # print("INJECT_REQUEST: action =", action)
+                return action
 
         return None
 
@@ -291,8 +289,7 @@ class InjectRequests:
     def add(self, match, response=None, http_status=None, requests_error=None):
         ctx_inject = self._ctx.setdefault("inject", {})
         ctx_rules = ctx_inject.setdefault("rules", [])
-        rule = {}
-        rule["match"] = match._as_dict()
+        rule = {"match": match._as_dict()}
         if response:
             rule["response"] = response
         if http_status:

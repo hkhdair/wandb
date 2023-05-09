@@ -7,12 +7,12 @@ def get_wandb_api_key() -> str:
     base_url = os.environ.get("WANDB_BASE_URL", "https://api.wandb.ai")
     api_key = os.environ.get("WANDB_API_KEY")
     if not api_key:
-        auth = requests.utils.get_netrc_auth(base_url)
-        if not auth:
+        if auth := requests.utils.get_netrc_auth(base_url):
+            api_key = auth[-1]
+        else:
             raise ValueError(
                 f"must configure api key by env or in netrc for {base_url}"
             )
-        api_key = auth[-1]
     return api_key
 
 

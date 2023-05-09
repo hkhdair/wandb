@@ -58,7 +58,7 @@ def test_offline_compression(wandb_init, capfd, console):
         run.finish()
 
         binary_log_file = (
-            os.path.join(os.path.dirname(run_dir), "run-" + run_id) + ".wandb"
+            f'{os.path.join(os.path.dirname(run_dir), f"run-{run_id}")}.wandb'
         )
         binary_log = (
             CliRunner()
@@ -86,11 +86,7 @@ def test_offline_compression(wandb_init, capfd, console):
 def test_very_long_output(wandb_init, capfd, console, numpy):
     # https://wandb.atlassian.net/browse/WB-5437
     with capfd.disabled():
-        with mock.patch.object(
-            wandb.wandb_sdk.lib.redirect,
-            "np",
-            wandb.sdk.lib.redirect._Numpy() if not numpy else np,
-        ):
+        with mock.patch.object(wandb.wandb_sdk.lib.redirect, "np", np if numpy else wandb.sdk.lib.redirect._Numpy()):
             run = wandb_init(
                 settings={
                     "console": console,
@@ -105,9 +101,7 @@ def test_very_long_output(wandb_init, capfd, console, numpy):
             time.sleep(5)
             run.finish()
 
-            binary_log_file = (
-                os.path.join(os.path.dirname(run_dir), "run-" + run_id) + ".wandb"
-            )
+            binary_log_file = f'{os.path.join(os.path.dirname(run_dir), f"run-{run_id}")}.wandb'
             binary_log = (
                 CliRunner()
                 .invoke(cli.sync, ["--view", "--verbose", binary_log_file])
@@ -123,16 +117,14 @@ def test_very_long_output(wandb_init, capfd, console, numpy):
 def test_no_numpy(wandb_init, capfd, console):
     with capfd.disabled():
         with mock.patch.object(
-            wandb.wandb_sdk.lib.redirect,
-            "np",
-            wandb.sdk.lib.redirect._Numpy(),
-        ):
+                    wandb.wandb_sdk.lib.redirect,
+                    "np",
+                    wandb.sdk.lib.redirect._Numpy(),
+                ):
             run = wandb_init(settings={"console": console})
             print("\x1b[31m\x1b[40m\x1b[1mHello\x01\x1b[22m\x1b[39m")
             run.finish()
-            binary_log_file = (
-                os.path.join(os.path.dirname(run.dir), "run-" + run.id) + ".wandb"
-            )
+            binary_log_file = f'{os.path.join(os.path.dirname(run.dir), f"run-{run.id}")}.wandb'
             _ = (
                 CliRunner()
                 .invoke(cli.sync, ["--view", "--verbose", binary_log_file])

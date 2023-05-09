@@ -92,10 +92,9 @@ def build(
     for tag in tags:
         build_tags += ["-t", tag]
     args = ["docker"] + command + build_tags + ["-f", file, context_path]
-    stdout = run_command_live_output(
+    return run_command_live_output(
         args,
     )
-    return stdout
 
 
 def run_command_live_output(args: List[Any]) -> str:
@@ -137,7 +136,7 @@ def run(
 ) -> Union[str, Tuple[str, str]]:
     args = [str(x) for x in args]
     subprocess_env = dict(os.environ)
-    subprocess_env.update(env or {})
+    subprocess_env |= (env or {})
     if args[1] == "buildx":
         subprocess_env["DOCKER_CLI_EXPERIMENTAL"] = "enabled"
     stdout_dest: Optional[int] = subprocess.PIPE if capture_stdout else None
@@ -176,7 +175,7 @@ def default_image(gpu: bool = False) -> str:
     tag = "all"
     if not gpu:
         tag += "-cpu"
-    return "wandb/deepo:%s" % tag
+    return f"wandb/deepo:{tag}"
 
 
 def parse_repository_tag(repo_name: str) -> Tuple[str, Optional[str]]:
@@ -202,9 +201,7 @@ def auth_token(registry: str, repo: str) -> Dict[str, str]:
 
     Always returns a dictionary, if there's no token key we couldn't authenticate
     """
-    # TODO: Cache tokens?
-    auth_info = auth_config.resolve_authconfig(registry)
-    if auth_info:
+    if auth_info := auth_config.resolve_authconfig(registry):
         normalized = {k.lower(): v for k, v in auth_info.items()}
         normalized_auth_info = (
             normalized.get("username"),
@@ -220,18 +217,14 @@ def auth_token(registry: str, repo: str) -> Dict[str, str]:
             info = {}
     else:
         log.error(
-            "Received {} when attempting to authenticate with {}".format(
-                response, registry
-            )
+            f"Received {response} when attempting to authenticate with {registry}"
         )
         info = {}
     if info.get("bearer"):
         res = requests.get(
             info["bearer"]["realm"]
-            + "?service={}&scope=repository:{}:pull".format(
-                info["bearer"]["service"], repo
-            ),
-            auth=normalized_auth_info,  # type: ignore
+            + f'?service={info["bearer"]["service"]}&scope=repository:{repo}:pull',
+            auth=normalized_auth_info,
             timeout=3,
         )
         res.raise_for_status()
@@ -261,22 +254,23 @@ def image_id_from_registry(image_name: str) -> Optional[str]:
     except requests.RequestException:
         log.error(f"Received {res} when attempting to get digest for {image_name}")
         return None
-    return "@".join([registry + "/" + repository, res.headers["Docker-Content-Digest"]])
+    return "@".join(
+        [f"{registry}/{repository}", res.headers["Docker-Content-Digest"]]
+    )
 
 
 def image_id(image_name: str) -> Optional[str]:
     """Retreve the image id from the local docker daemon or remote registry."""
     if "@sha256:" in image_name:
         return image_name
-    else:
-        digests = shell(["inspect", image_name, "--format", "{{json .RepoDigests}}"])
-        try:
-            if digests is None:
-                raise ValueError
-            im_id: str = json.loads(digests)[0]
-            return im_id
-        except (ValueError, IndexError):
-            return image_id_from_registry(image_name)
+    digests = shell(["inspect", image_name, "--format", "{{json .RepoDigests}}"])
+    try:
+        if digests is None:
+            raise ValueError
+        im_id: str = json.loads(digests)[0]
+        return im_id
+    except (ValueError, IndexError):
+        return image_id_from_registry(image_name)
 
 
 def get_image_uid(image_name: str) -> int:

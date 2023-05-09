@@ -45,15 +45,11 @@ __IFrame = None
 
 def maybe_display():
     """Display a run if the user added cell magic and we have run."""
-    if __IFrame is not None:
-        return __IFrame.maybe_display()
-    return False
+    return __IFrame.maybe_display() if __IFrame is not None else False
 
 
 def quiet():
-    if __IFrame is not None:
-        return __IFrame.opts.get("quiet")
-    return False
+    return __IFrame.opts.get("quiet") if __IFrame is not None else False
 
 
 class IFrame:
@@ -72,9 +68,12 @@ class IFrame:
     def _repr_html_(self):
         try:
             self.displayed = True
-            if self.opts.get("workspace", False):
-                if self.path is None and wandb.run:
-                    self.path = wandb.run.path
+            if (
+                self.opts.get("workspace", False)
+                and self.path is None
+                and wandb.run
+            ):
+                self.path = wandb.run.path
             if isinstance(self.path, str):
                 object = self.api.from_path(self.path)
             else:
@@ -169,13 +168,17 @@ def notebook_metadata_from_jupyter_servers_and_kernel_id():
         for nn in res:
             # TODO: wandb/client#400 found a case where res returned an array of
             # strings...
-            if isinstance(nn, dict) and nn.get("kernel") and "notebook" in nn:
-                if nn["kernel"]["id"] == kernel_id:
-                    return {
-                        "root": s.get("root_dir", s.get("notebook_dir", os.getcwd())),
-                        "path": nn["notebook"]["path"],
-                        "name": nn["notebook"]["name"],
-                    }
+            if (
+                isinstance(nn, dict)
+                and nn.get("kernel")
+                and "notebook" in nn
+                and nn["kernel"]["id"] == kernel_id
+            ):
+                return {
+                    "root": s.get("root_dir", s.get("notebook_dir", os.getcwd())),
+                    "path": nn["notebook"]["path"],
+                    "name": nn["notebook"]["name"],
+                }
     return None
 
 
@@ -209,9 +212,7 @@ def notebook_metadata(silent: bool) -> Dict[str, str]:
 
         # Kaggle:
         if wandb.util._is_kaggle():
-            # request the most recent contents
-            ipynb = attempt_kaggle_load_ipynb()
-            if ipynb:
+            if ipynb := attempt_kaggle_load_ipynb():
                 return {
                     "root": "/kaggle/working",
                     "path": ipynb["metadata"]["name"],
@@ -242,7 +243,7 @@ def jupyter_servers_and_kernel_id():
 
         kernel_id = re.search(
             "kernel-(.*).json", ipykernel.connect.get_connection_file()
-        ).group(1)
+        )[1]
         # We're either in jupyterlab or a notebook, lets prefer the newer jupyter_server package
         serverapp = wandb.util.get_module("jupyter_server.serverapp")
         notebookapp = wandb.util.get_module("notebook.notebookapp")
@@ -257,17 +258,15 @@ def jupyter_servers_and_kernel_id():
 
 
 def attempt_colab_load_ipynb():
-    colab = wandb.util.get_module("google.colab")
-    if colab:
-        # This isn't thread safe, never call in a thread
-        response = colab._message.blocking_request("get_ipynb", timeout_sec=5)
-        if response:
+    if colab := wandb.util.get_module("google.colab"):
+        if response := colab._message.blocking_request(
+            "get_ipynb", timeout_sec=5
+        ):
             return response["ipynb"]
 
 
 def attempt_kaggle_load_ipynb():
-    kaggle = wandb.util.get_module("kaggle_session")
-    if kaggle:
+    if kaggle := wandb.util.get_module("kaggle_session"):
         try:
             client = kaggle.UserSessionClient()
             parsed = json.loads(client.get_exportable_ipynb()["source"])
@@ -351,15 +350,11 @@ class Notebook:
 
     def probe_ipynb(self):
         """Return notebook as dict or None."""
-        relpath = self.settings._jupyter_path
-        if relpath:
+        if relpath := self.settings._jupyter_path:
             if os.path.exists(relpath):
                 with open(relpath) as json_file:
-                    data = json.load(json_file)
-                    return data
-
-        colab_ipynb = attempt_colab_load_ipynb()
-        if colab_ipynb:
+                    return json.load(json_file)
+        if colab_ipynb := attempt_colab_load_ipynb():
             return colab_ipynb
 
         kaggle_ipynb = attempt_kaggle_load_ipynb()
@@ -382,19 +377,16 @@ class Notebook:
     def _save_ipynb(self) -> bool:
         relpath = self.settings._jupyter_path
         logger.info("looking for notebook: %s", relpath)
-        if relpath:
-            if os.path.exists(relpath):
-                shutil.copy(
-                    relpath,
-                    os.path.join(
-                        self.settings._tmp_code_dir, os.path.basename(relpath)
-                    ),
-                )
-                return True
+        if relpath and os.path.exists(relpath):
+            shutil.copy(
+                relpath,
+                os.path.join(
+                    self.settings._tmp_code_dir, os.path.basename(relpath)
+                ),
+            )
+            return True
 
-        # TODO: likely only save if the code has changed
-        colab_ipynb = attempt_colab_load_ipynb()
-        if colab_ipynb:
+        if colab_ipynb := attempt_colab_load_ipynb():
             try:
                 jupyter_metadata = (
                     notebook_metadata_from_jupyter_servers_and_kernel_id()
@@ -454,14 +446,14 @@ class Notebook:
                 else:
                     outputs = []
                 if self.outputs.get(execution_count):
-                    for out in self.outputs[execution_count]:
-                        outputs.append(
-                            v4.new_output(
-                                output_type="display_data",
-                                data=out["data"],
-                                metadata=out["metadata"] or {},
-                            )
+                    outputs.extend(
+                        v4.new_output(
+                            output_type="display_data",
+                            data=out["data"],
+                            metadata=out["metadata"] or {},
                         )
+                        for out in self.outputs[execution_count]
+                    )
                 cells.append(
                     v4.new_code_cell(
                         execution_count=execution_count, source=exc[0], outputs=outputs
@@ -498,4 +490,3 @@ class Notebook:
                 write(nb, f, version=4)
         except (OSError, validator.NotebookValidationError) as e:
             logger.error("Unable to save ipython session history:\n%s", e)
-            pass

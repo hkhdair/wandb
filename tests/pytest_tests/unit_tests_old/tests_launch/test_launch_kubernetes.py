@@ -61,9 +61,7 @@ class MockCoreV1Api:
         ret = []
         k, v = label_selector.split("=")
         if k == "job-name":
-            for pod in self.pods.items:
-                if pod.job_name == v:
-                    ret.append(pod)
+            ret.extend(pod for pod in self.pods.items if pod.job_name == v)
         return MockPodList(ret)
 
     def read_namespaced_pod(self, name, namespace):
@@ -558,8 +556,8 @@ def test_kube_multi_container(
         "entity": entity,
         "project": project,
         "resource_args": {"kubernetes": spec},
+        "docker_image": "test:tag",
     }
-    kwargs["docker_image"] = "test:tag"
     with pytest.raises(LaunchError) as e:
         run = launch.run(**kwargs)
         assert "Multiple container configurations should be specified in a yaml" in str(

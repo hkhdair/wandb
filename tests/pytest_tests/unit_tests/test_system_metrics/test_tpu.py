@@ -17,15 +17,16 @@ class MockProfilerClient:
         self.tpu_utilization = tpu_utilization
 
     def monitor(self, service_addr, duration_ms, level):
-        if service_addr != "local":
-            if level == 1:
-                return f"""
+        if service_addr == "local":
+            raise Exception
+        if level == 1:
+            return f"""
                 Timestamp: 20:47:16
                 TPU type: TPU v2
                 Utilization of TPU Matrix Units (higher is better): {self.tpu_utilization}%
                 """
-            elif level == 2:
-                return f"""
+        elif level == 2:
+            return f"""
                 Timestamp: 20:41:52
                 TPU type: TPU v2
                 Number of TPU cores: 8 (Replica count = 8, num cores per replica = 1)
@@ -34,8 +35,6 @@ class MockProfilerClient:
                 Step time: 90.8ms (avg), 89.8ms (min), 92.2ms (max)
                 Infeed percentage: 0.000% (avg), 0.000% (min), 0.000% (max)
                 """
-        else:
-            raise Exception
 
 
 # class MockTPUClusterResolver:

@@ -37,8 +37,7 @@ def find_list_of_key_locations_and_dicts(data, search_key: str, root=None):
                 find_list_of_key_locations_and_dicts(val, search_key, root=find_root)
             )
     elif isinstance(data, dict):
-        check = data.get(search_key)
-        if check:
+        if check := data.get(search_key):
             found.append((root, data))
         for key, val in data.items():
             find_root = root[:]
@@ -46,9 +45,7 @@ def find_list_of_key_locations_and_dicts(data, search_key: str, root=None):
             found.extend(
                 find_list_of_key_locations_and_dicts(val, search_key, root=find_root)
             )
-    elif isinstance(data, (str, int, float, type(None))):
-        pass
-    else:
+    elif not isinstance(data, (str, int, float, type(None))):
         raise RuntimeError(f"unknown type: type={type(data)} data={data}")
     return found
 

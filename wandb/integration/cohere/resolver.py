@@ -101,7 +101,6 @@ class CohereRequestResponseResolver:
             )
             for choice in choices
         ]
-        trace = self.results_to_trace_tree(
+        return self.results_to_trace_tree(
             request, response, endpoint, results, start_time, time_elapsed
         )
-        return trace

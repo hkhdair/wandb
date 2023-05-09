@@ -409,7 +409,7 @@ def test_add_reference_local_dir():
         f.write("dude")
 
     artifact = wandb.Artifact(type="dataset", name="my-arty")
-    artifact.add_reference("file://" + os.getcwd())
+    artifact.add_reference(f"file://{os.getcwd()}")
 
     assert artifact.digest == "13d688af2d0dab74e0544a4c5c542735"
     manifest = artifact.manifest.to_manifest_json()
@@ -449,7 +449,7 @@ def test_add_reference_local_dir_no_checksum():
     size_3 = os.path.getsize(path_3)
 
     artifact = wandb.Artifact(type="dataset", name="my-arty")
-    artifact.add_reference("file://" + os.getcwd(), checksum=False)
+    artifact.add_reference(f"file://{os.getcwd()}", checksum=False)
 
     assert artifact.digest == "7ca355c7f600119151d607c98921ab50"
     manifest = artifact.manifest.to_manifest_json()
@@ -481,7 +481,7 @@ def test_add_reference_local_dir_with_name():
         f.write("dude")
 
     artifact = wandb.Artifact(type="dataset", name="my-arty")
-    artifact.add_reference("file://" + os.getcwd(), name="top")
+    artifact.add_reference(f"file://{os.getcwd()}", name="top")
 
     assert artifact.digest == "c406b09e8b6cb180e9be7fa010bf5a83"
     manifest = artifact.manifest.to_manifest_json()

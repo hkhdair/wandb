@@ -23,7 +23,7 @@ def test_kubernetes_run_clean_generate_name(relay_server, monkeypatch, assets_pa
         expected_generate_name = make_name_dns_safe(
             f"launch-{entity_name}-{project_name}-"
         )
-        expected_run_name = expected_generate_name + "testname"
+        expected_run_name = f"{expected_generate_name}testname"
 
         setup_mock_kubernetes_client(monkeypatch, jobs, pods(expected_run_name), status)
 
@@ -83,7 +83,7 @@ def test_kubernetes_run_with_annotations(relay_server, monkeypatch, assets_path)
         expected_generate_name = make_name_dns_safe(
             f"launch-{entity_name}-{project_name}-"
         )
-        expected_run_name = expected_generate_name + "testname"
+        expected_run_name = f"{expected_generate_name}testname"
 
         setup_mock_kubernetes_client(monkeypatch, jobs, pods(expected_run_name), status)
 
@@ -139,9 +139,7 @@ class MockCoreV1Api:
         ret = []
         k, v = label_selector.split("=")
         if k == "job-name":
-            for pod in self.pods.items:
-                if pod.job_name == v:
-                    ret.append(pod)
+            ret.extend(pod for pod in self.pods.items if pod.job_name == v)
         return MockPodList(ret)
 
 

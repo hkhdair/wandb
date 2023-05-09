@@ -159,15 +159,15 @@ class OpsFactory:
     @staticmethod
     def get_op_size(record):
         assert OpsFactory.is_op(record)
-        msg_size = json.loads(record.history.item[1].value_json)
-        return msg_size
+        return json.loads(record.history.item[1].value_json)
 
     @staticmethod
     def get_op_id(record):
-        if not OpsFactory.is_op(record):
-            return None
-        msg_id = json.loads(record.history.item[2].value_json)
-        return msg_id
+        return (
+            json.loads(record.history.item[2].value_json)
+            if OpsFactory.is_op(record)
+            else None
+        )
 
     @staticmethod
     def is_op(record):
@@ -177,9 +177,7 @@ class OpsFactory:
         if record.history.item[0].key != "op":
             return False
         op_type = json.loads(record.history.item[0].value_json)
-        if op_type != "data":
-            return False
-        return True
+        return op_type == "data"
 
 
 @pytest.fixture
@@ -231,7 +229,7 @@ def test_forward_to_pause(flow_tester, ops_factory, size_offset, paused):
         ft.add(op)
         assert ft.state == State.PAUSING
     assert batch_test2 == ft.written
-    assert (batch_test2 if not paused else []) == ft.forwarded_ops
+    assert ([] if paused else batch_test2) == ft.forwarded_ops
 
     for op in batch_post:
         ft.add(op)

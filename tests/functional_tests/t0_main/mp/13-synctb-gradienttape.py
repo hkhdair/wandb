@@ -62,8 +62,8 @@ def test_step(model, x_test, y_test):
 
 current_time = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
 log_base = args.log_dir or "logs/gradient_tape/"
-train_log_dir = log_base + "/" + current_time + "/train"
-test_log_dir = log_base + "/" + current_time + "/test"
+train_log_dir = f"{log_base}/{current_time}/train"
+test_log_dir = f"{log_base}/{current_time}/test"
 train_summary_writer = tf.summary.create_file_writer(train_log_dir)
 test_summary_writer = tf.summary.create_file_writer(test_log_dir)
 
@@ -95,7 +95,7 @@ for epoch in range(EPOCHS):
     for x_test, y_test in test_dataset:
         test_step(model, x_test, y_test)
         if images is None:
-            images = np.reshape(x_test[0:25], (-1, 28, 28, 1))
+            images = np.reshape(x_test[:25], (-1, 28, 28, 1))
 
     with test_summary_writer.as_default():
         tf.summary.scalar("loss", test_loss.result(), step=epoch)

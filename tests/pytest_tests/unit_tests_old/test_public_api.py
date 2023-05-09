@@ -240,11 +240,7 @@ def test_runs_from_path_index(mock_server, api):
 
 def test_projects(mock_server, api):
     projects = api.projects("test")
-    # projects doesn't provide a length for now, so we iterate
-    # them all to count
-    count = 0
-    for proj in projects:
-        count += 1
+    count = sum(1 for _ in projects)
     assert count == 2
 
 
@@ -322,10 +318,7 @@ def test_artifact_file(runner, mock_server, api):
     with runner.isolated_filesystem():
         art = api.artifact("entity/project/mnist:v0", type="dataset")
         path = art.file()
-        if platform.system() == "Windows":
-            part = "mnist-v0"
-        else:
-            part = "mnist:v0"
+        part = "mnist-v0" if platform.system() == "Windows" else "mnist:v0"
         assert path == os.path.join(".", "artifacts", part, "digits.h5")
 
 
@@ -348,10 +341,7 @@ def test_artifact_download(runner, mock_server, api):
     with runner.isolated_filesystem():
         art = api.artifact("entity/project/mnist:v0", type="dataset")
         path = art.download()
-        if platform.system() == "Windows":
-            part = "mnist-v0"
-        else:
-            part = "mnist:v0"
+        part = "mnist-v0" if platform.system() == "Windows" else "mnist:v0"
         assert path == os.path.join(".", "artifacts", part)
         assert os.listdir(path) == ["digits.h5"]
 
@@ -398,10 +388,7 @@ def test_artifact_run_logged(runner, mock_server, api):
 
 def test_artifact_run_logged_cursor(runner, mock_server, api):
     artifacts = api.run("test/test/test").logged_artifacts()
-    count = 0
-    for artifact in artifacts:
-        count += 1
-
+    count = sum(1 for _ in artifacts)
     assert len(artifacts) == count
 
 
@@ -409,7 +396,6 @@ def test_artifact_manual_use(runner, mock_server, api):
     run = api.run("test/test/test")
     art = api.artifact("entity/project/mnist:v0", type="dataset")
     run.use_artifact(art)
-    assert True
 
 
 def test_artifact_bracket_accessor(runner, live_mock_server, api):
@@ -425,7 +411,6 @@ def test_artifact_manual_log(runner, mock_server, api):
     run = api.run("test/test/test")
     art = api.artifact("entity/project/mnist:v0", type="dataset")
     run.log_artifact(art)
-    assert True
 
 
 def test_artifact_manual_link(runner, mock_server, api):

@@ -29,7 +29,7 @@ class WandbNotebookClient(NotebookClient):
                 raise e
             for output in ecell["outputs"]:
                 if output["output_type"] == "error":
-                    print("Error in cell: %s" % idx + 1)
+                    print(f"Error in cell: {idx}" + 1)
                     print("\n".join(output["traceback"]))
                     raise ValueError(output["evalue"])
             executed_cells.append(ecell)
@@ -49,19 +49,13 @@ class WandbNotebookClient(NotebookClient):
             str -- Text output
         """
 
-        text = ""
         outputs = self.nb["cells"][cell_index + 1]["outputs"]
-        for output in outputs:
-            if "text" in output:
-                text += output["text"]
-
-        return text
+        return "".join(output["text"] for output in outputs if "text" in output)
 
     def all_output_text(self):
-        text = ""
-        for i in range(len(self.nb["cells"]) - 1):
-            text += self.cell_output_text(i)
-        return text
+        return "".join(
+            self.cell_output_text(i) for i in range(len(self.nb["cells"]) - 1)
+        )
 
     @property
     def cells(self):
@@ -79,5 +73,4 @@ class WandbNotebookClient(NotebookClient):
             list -- List of outputs for the given cell
         """
 
-        outputs = self.nb["cells"][cell_index + 1]["outputs"]
-        return outputs
+        return self.nb["cells"][cell_index + 1]["outputs"]

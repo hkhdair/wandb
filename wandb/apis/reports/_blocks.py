@@ -68,19 +68,12 @@ class PanelGrid(Block):
     def active_runset(self):
         json_path = self._get_path("active_runset")
         index = nested_get(self, json_path)
-        if index is None:
-            return None
-        else:
-            return self.runsets[index].name
+        return None if index is None else self.runsets[index].name
 
     @active_runset.setter
     def active_runset(self, name):
         json_path = self._get_path("active_runset")
-        index = None
-        for i, rs in enumerate(self.runsets):
-            if rs.name == name:
-                index = i
-                break
+        index = next((i for i, rs in enumerate(self.runsets) if rs.name == name), None)
         nested_set(self, json_path, index)
 
     @panels.getter
@@ -167,10 +160,7 @@ class PanelGrid(Block):
         for id, c in id_colors.items():
             if id == "ref":
                 continue
-            if is_groupid(id):
-                key = groupid_to_ordertuple(id)
-            else:
-                key = run_id_to_name(id)
+            key = groupid_to_ordertuple(id) if is_groupid(id) else run_id_to_name(id)
             color_settings[key] = c
         return color_settings
 
@@ -355,9 +345,7 @@ class CheckedList(Block, List):
         children = []
         for item, check in zip(self.items, self.checked):
             if isinstance(item, list):
-                content = [
-                    t.spec if not isinstance(t, str) else {"text": t} for t in item
-                ]
+                content = [{"text": t} if isinstance(t, str) else t.spec for t in item]
             else:
                 content = [{"text": item}]
             children.append(
@@ -383,9 +371,7 @@ class OrderedList(Block, List):
         children = []
         for item in self.items:
             if isinstance(item, list):
-                content = [
-                    t.spec if not isinstance(t, str) else {"text": t} for t in item
-                ]
+                content = [{"text": t} if isinstance(t, str) else t.spec for t in item]
             else:
                 content = [{"text": item}]
             children.append(
@@ -411,9 +397,7 @@ class UnorderedList(Block, List):
         children = []
         for item in self.items:
             if isinstance(item, list):
-                content = [
-                    t.spec if not isinstance(t, str) else {"text": t} for t in item
-                ]
+                content = [{"text": t} if isinstance(t, str) else t.spec for t in item]
             else:
                 content = [{"text": item}]
             children.append(
@@ -462,9 +446,7 @@ class H1(Block, Heading):
     @property
     def spec(self) -> dict:
         if isinstance(self.text, list):
-            content = [
-                t.spec if not isinstance(t, str) else {"text": t} for t in self.text
-            ]
+            content = [{"text": t} if isinstance(t, str) else t.spec for t in self.text]
         else:
             content = [{"text": self.text}]
         return {
@@ -484,9 +466,7 @@ class H2(Block, Heading):
     @property
     def spec(self) -> dict:
         if isinstance(self.text, list):
-            content = [
-                t.spec if not isinstance(t, str) else {"text": t} for t in self.text
-            ]
+            content = [{"text": t} if isinstance(t, str) else t.spec for t in self.text]
         else:
             content = [{"text": self.text}]
         return {
@@ -506,9 +486,7 @@ class H3(Block, Heading):
     @property
     def spec(self) -> dict:
         if isinstance(self.text, list):
-            content = [
-                t.spec if not isinstance(t, str) else {"text": t} for t in self.text
-            ]
+            content = [{"text": t} if isinstance(t, str) else t.spec for t in self.text]
         else:
             content = [{"text": self.text}]
         return {
@@ -1356,9 +1334,7 @@ class P(Block):
     @property
     def spec(self) -> dict:
         if isinstance(self.text, list):
-            content = [
-                t.spec if not isinstance(t, str) else {"text": t} for t in self.text
-            ]
+            content = [{"text": t} if isinstance(t, str) else t.spec for t in self.text]
         else:
             content = [{"text": self.text}]
 

@@ -210,22 +210,20 @@ def use_model(aliased_path: str) -> "_SavedModel":
             "aliased_path must be of the form 'name:alias' or 'name:version'."
         )
 
-    # Returns a _SavedModel instance
-    if wandb.run:
-        run = wandb.run
-        artifact = run.use_artifact(aliased_path)
-        sm = artifact.get("index")
-
-        if sm is None or not isinstance(sm, _SavedModel):
-            raise ValueError(
-                "Deserialization into model object failed: _SavedModel instance could not be initialized properly."
-            )
-
-        return sm
-    else:
+    if not wandb.run:
         raise ValueError(
             "use_model can only be called inside a run. Please call wandb.init() before use_model(...)"
         )
+    run = wandb.run
+    artifact = run.use_artifact(aliased_path)
+    sm = artifact.get("index")
+
+    if sm is None or not isinstance(sm, _SavedModel):
+        raise ValueError(
+            "Deserialization into model object failed: _SavedModel instance could not be initialized properly."
+        )
+
+    return sm
 
 
 def link_model(
@@ -275,10 +273,10 @@ def link_model(
 
         run.link_artifact(artifact, target_path, aliases)
 
+    elif model._artifact_source is None:
+        raise ValueError(
+            "Linking requires that the given _SavedModel belongs to a logged artifact."
+        )
+
     else:
-        if model._artifact_source is not None:
-            model._artifact_source.artifact.link(target_path, aliases)
-        else:
-            raise ValueError(
-                "Linking requires that the given _SavedModel belongs to a logged artifact."
-            )
+        model._artifact_source.artifact.link(target_path, aliases)

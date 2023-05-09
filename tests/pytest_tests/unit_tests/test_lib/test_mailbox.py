@@ -106,8 +106,7 @@ class TimeObject:
         self._run_timed_events()
 
     def get_time(self):
-        now = self._time_start + self._time_elapsed
-        return now
+        return self._time_start + self._time_elapsed
 
 
 class TestWithMockedTime(TestCase):

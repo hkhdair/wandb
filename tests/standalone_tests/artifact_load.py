@@ -82,9 +82,9 @@ def gen_files(n_files, max_small_size, max_large_size):
 
     fnames = []
     for i in tqdm(range(n_files)):
-        full_dir = os.path.join("source_files", "%s" % (i % 4))
+        full_dir = os.path.join("source_files", f"{i % 4}")
         os.makedirs(full_dir, exist_ok=True)
-        fname = os.path.join(full_dir, "%s.txt" % i)
+        fname = os.path.join(full_dir, f"{i}.txt")
         fnames.append(fname)
         with open(fname, "w") as f:
             small = random.random() < 0.5
@@ -207,7 +207,7 @@ def proc_version_reader(
             pass
         versions = api.artifact_versions("dataset", artifact_name)
         versions = [v for v in versions if v.state == "COMMITTED"]
-        if len(versions) == 0:
+        if not versions:
             time.sleep(5)
             continue
         version = random.choice(versions)
@@ -227,7 +227,7 @@ def proc_version_reader(
                 continue
             print("Reader downloading: ", version)
             try:
-                version.checkout("read-%s" % reader_id)
+                version.checkout(f"read-{reader_id}")
             except Exception as e:
                 stats_queue.put({"read_download_error": 1})
                 print(f"Reader caught error on version.download: {e}")
@@ -298,9 +298,7 @@ def main(argv):  # noqa: C901
 
     project_name = args.project
     if project_name is None:
-        project_name = "artifacts-load-test-%s" % str(datetime.now()).replace(
-            " ", "-"
-        ).replace(":", "-").replace(".", "-")
+        project_name = f'artifacts-load-test-{str(datetime.now()).replace(" ", "-").replace(":", "-").replace(".", "-")}'
 
     env_project = os.environ.get("WANDB_PROJECT")
 
@@ -341,10 +339,10 @@ def main(argv):  # noqa: C901
     )
     print("Done generating source data")
 
-    procs = []
     stop_queue = multiprocessing.Queue()
     stats_queue = multiprocessing.Queue()
 
+    procs = []
     # start all processes
 
     # writers
@@ -449,7 +447,7 @@ def main(argv):  # noqa: C901
             stat_update = stats_queue.get(True, 5000)
         except queue.Empty:
             pass
-        print("** Test time: %s" % (time.time() - start_time))
+        print(f"** Test time: {time.time() - start_time}")
         if stat_update:
             for k, v in stat_update.items():
                 stats[k] += v
@@ -457,7 +455,7 @@ def main(argv):  # noqa: C901
 
     print("Test phase time expired")
     # stop all processes and wait til all are done
-    for _ in range(len(procs)):
+    for _ in procs:
         stop_queue.put(True)
     print("Waiting for processes to stop")
     fail = False
@@ -498,11 +496,11 @@ def main(argv):  # noqa: C901
     data_api = wandb.Api()
     # we need list artifacts by walking runs, accessing via
     # project.artifactType.artifacts only returns committed artifacts
-    for run in data_api.runs("{}/{}".format(api.settings("entity"), project_name)):
+    for run in data_api.runs(f'{api.settings("entity")}/{project_name}'):
         for v in run.logged_artifacts():
             # TODO: allow deleted once we build deletion support
-            if v.state != "COMMITTED" and v.state != "DELETED":
-                print("FAIL! Artifact version not committed or deleted: %s" % v)
+            if v.state not in ["COMMITTED", "DELETED"]:
+                print(f"FAIL! Artifact version not committed or deleted: {v}")
                 sys.exit(1)
 
     print("Verification succeeded")

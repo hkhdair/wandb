@@ -53,7 +53,7 @@ def test_log_code_env(live_mock_server, test_settings, save_code):
                 f"source-{run._project}-{run._settings.program_relpath}"
             )
         else:
-            assert len(artifact_names) == 0
+            assert not artifact_names
 
 
 @pytest.mark.parametrize("empty_query", [True, False])

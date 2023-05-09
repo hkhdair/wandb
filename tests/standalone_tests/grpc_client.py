@@ -78,24 +78,18 @@ def make_settings(settings_dict, obj):
 
 def make_run_data(data):
     rdata = wandb_internal_pb2.RunRecord()
-    run_id = data.get("run_id")
-    if run_id:
+    if run_id := data.get("run_id"):
         rdata.run_id = run_id
-    entity = data.get("entity")
-    if entity:
+    if entity := data.get("entity"):
         rdata.entity = entity
-    project = data.get("project")
-    if project:
+    if project := data.get("project"):
         rdata.project = project
-    run_group = data.get("group")
-    if run_group:
+    if run_group := data.get("group"):
         rdata.run_group = run_group
-    job_type = data.get("job_type")
-    if job_type:
+    if job_type := data.get("job_type"):
         rdata.job_type = job_type
     config_dict = data.get("config")
-    config_dict = data.get("config")
-    if config_dict:
+    if config_dict := data.get("config"):
         make_config(config_dict, obj=rdata.config)
     return rdata
 
@@ -167,8 +161,7 @@ class WandbInternalClient:
     def run_update(self, data):
         req = make_run_data(data)
         self._apply_stream(req)
-        run = self._stub.RunUpdate(req)
-        return run
+        return self._stub.RunUpdate(req)
 
     def log(self, data):
         req = make_log_data(data)
@@ -240,9 +233,7 @@ def main():
     run = run_result.run
     base_url = "https://app.wandb.ai"
     print(
-        "Monitor your run ({}) at: {}/{}/{}/runs/{}".format(
-            run.display_name, base_url, run.entity, run.project, run.run_id
-        )
+        f"Monitor your run ({run.display_name}) at: {base_url}/{run.entity}/{run.project}/runs/{run.run_id}"
     )
     wic.log(dict(this=2, _step=1))
     wic.log(dict(this=3, _step=2))
@@ -254,9 +245,7 @@ def main():
     print("delay for 30 seconds...")
     time.sleep(30)
     print(
-        "Your run ({}) is complete: {}/{}/{}/runs/{}".format(
-            run.display_name, base_url, run.entity, run.project, run.run_id
-        )
+        f"Your run ({run.display_name}) is complete: {base_url}/{run.entity}/{run.project}/runs/{run.run_id}"
     )
     wic.exit(dict(exit_code=0))
 

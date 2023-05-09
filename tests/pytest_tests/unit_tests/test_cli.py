@@ -118,10 +118,9 @@ def test_login_host_trailing_slash_fix_invalid(runner, dummy_api_key, local_sett
         assert result.exit_code == 0
         with open("netrc") as f:
             generated_netrc = f.read()
-        assert generated_netrc == (
-            "machine google.com\n"
-            "  login user\n"
-            "  password {}\n".format(dummy_api_key)
+        assert (
+            generated_netrc
+            == f"machine google.com\n  login user\n  password {dummy_api_key}\n"
         )
 
 
@@ -141,7 +140,7 @@ def test_login_bad_host(runner, host, error, local_settings):
 
 def test_login_onprem_key_arg(runner, dummy_api_key):
     with runner.isolated_filesystem():
-        onprem_key = "test-" + dummy_api_key
+        onprem_key = f"test-{dummy_api_key}"
         # with runner.isolated_filesystem():
         result = runner.invoke(cli.login, [onprem_key])
         print("Output: ", result.output)
@@ -155,7 +154,7 @@ def test_login_onprem_key_arg(runner, dummy_api_key):
 
 def test_login_invalid_key_arg(runner, dummy_api_key):
     with runner.isolated_filesystem():
-        invalid_key = "test--" + dummy_api_key
+        invalid_key = f"test--{dummy_api_key}"
         result = runner.invoke(cli.login, [invalid_key])
         assert "API key must be 40 characters long, yours was" in str(result)
         assert result.exit_code == 1
@@ -250,10 +249,10 @@ def test_docker_run_digest(runner, docker, monkeypatch):
             "-e",
             "WANDB_API_KEY=test",
             "-e",
-            "WANDB_DOCKER=%s" % DOCKER_SHA,
+            f"WANDB_DOCKER={DOCKER_SHA}",
             "--runtime",
             "nvidia",
-            "%s" % DOCKER_SHA,
+            f"{DOCKER_SHA}",
         ]
     )
 
@@ -332,11 +331,11 @@ def test_docker(runner, docker):
                 "WANDB_DOCKER=wandb/deepo@sha256:abc123",
                 "--ipc=host",
                 "-v",
-                wandb.docker.entrypoint + ":/wandb-entrypoint.sh",
+                f"{wandb.docker.entrypoint}:/wandb-entrypoint.sh",
                 "--entrypoint",
                 "/wandb-entrypoint.sh",
                 "-v",
-                os.getcwd() + ":/app",
+                f"{os.getcwd()}:/app",
                 "-w",
                 "/app",
                 "-e",
@@ -364,11 +363,11 @@ def test_docker_basic(runner, docker, git_repo):
             "WANDB_DOCKER=wandb/deepo@sha256:abc123",
             "--ipc=host",
             "-v",
-            wandb.docker.entrypoint + ":/wandb-entrypoint.sh",
+            f"{wandb.docker.entrypoint}:/wandb-entrypoint.sh",
             "--entrypoint",
             "/wandb-entrypoint.sh",
             "-v",
-            os.getcwd() + ":/app",
+            f"{os.getcwd()}:/app",
             "-w",
             "/app",
             "-e",
@@ -395,11 +394,11 @@ def test_docker_sha(runner, docker):
             "WANDB_DOCKER=test@sha256:abc123",
             "--ipc=host",
             "-v",
-            wandb.docker.entrypoint + ":/wandb-entrypoint.sh",
+            f"{wandb.docker.entrypoint}:/wandb-entrypoint.sh",
             "--entrypoint",
             "/wandb-entrypoint.sh",
             "-v",
-            os.getcwd() + ":/app",
+            f"{os.getcwd()}:/app",
             "-w",
             "/app",
             "-e",
@@ -426,7 +425,7 @@ def test_docker_no_dir(runner, docker):
             "WANDB_DOCKER=wandb/deepo@sha256:abc123",
             "--ipc=host",
             "-v",
-            wandb.docker.entrypoint + ":/wandb-entrypoint.sh",
+            f"{wandb.docker.entrypoint}:/wandb-entrypoint.sh",
             "--entrypoint",
             "/wandb-entrypoint.sh",
             "-e",
@@ -456,11 +455,11 @@ def test_docker_no_interactive_custom_command(runner, docker, git_repo):
             "WANDB_DOCKER=wandb/deepo@sha256:abc123",
             "--ipc=host",
             "-v",
-            wandb.docker.entrypoint + ":/wandb-entrypoint.sh",
+            f"{wandb.docker.entrypoint}:/wandb-entrypoint.sh",
             "--entrypoint",
             "/wandb-entrypoint.sh",
             "-v",
-            os.getcwd() + ":/app",
+            f"{os.getcwd()}:/app",
             "-w",
             "/app",
             "-e",
@@ -490,11 +489,11 @@ def test_docker_jupyter(runner, docker):
                 "WANDB_DOCKER=wandb/deepo@sha256:abc123",
                 "--ipc=host",
                 "-v",
-                wandb.docker.entrypoint + ":/wandb-entrypoint.sh",
+                f"{wandb.docker.entrypoint}:/wandb-entrypoint.sh",
                 "--entrypoint",
                 "/wandb-entrypoint.sh",
                 "-v",
-                os.getcwd() + ":/app",
+                f"{os.getcwd()}:/app",
                 "-w",
                 "/app",
                 "-e",
@@ -506,10 +505,8 @@ def test_docker_jupyter(runner, docker):
                 "test",
                 "/bin/bash",
                 "-c",
-                (
-                    "jupyter lab --no-browser --ip=0.0.0.0 --allow-root "
-                    "--NotebookApp.token= --notebook-dir /app"
-                ),
+                "jupyter lab --no-browser --ip=0.0.0.0 --allow-root "
+                "--NotebookApp.token= --notebook-dir /app",
             ]
         )
         assert result.exit_code == 0
@@ -530,11 +527,11 @@ def test_docker_args(runner, docker):
                 "WANDB_DOCKER=wandb/deepo@sha256:abc123",
                 "--ipc=host",
                 "-v",
-                wandb.docker.entrypoint + ":/wandb-entrypoint.sh",
+                f"{wandb.docker.entrypoint}:/wandb-entrypoint.sh",
                 "--entrypoint",
                 "/wandb-entrypoint.sh",
                 "-v",
-                os.getcwd() + ":/app",
+                f"{os.getcwd()}:/app",
                 "-w",
                 "/app",
                 "-e",
@@ -578,7 +575,7 @@ def test_local_default(runner, docker, local_settings):
                 "--name",
                 "wandb-local",
                 "-e",
-                "LOCAL_USERNAME=%s" % user,
+                f"LOCAL_USERNAME={user}",
                 "-d",
                 "wandb/local",
             ]
@@ -603,7 +600,7 @@ def test_local_custom_port(runner, docker, local_settings):
             "--name",
             "wandb-local",
             "-e",
-            "LOCAL_USERNAME=%s" % user,
+            f"LOCAL_USERNAME={user}",
             "-d",
             "wandb/local",
         ]
@@ -628,7 +625,7 @@ def test_local_custom_env(runner, docker, local_settings):
             "--name",
             "wandb-local",
             "-e",
-            "LOCAL_USERNAME=%s" % user,
+            f"LOCAL_USERNAME={user}",
             "-e",
             "FOO=bar",
             "-d",

@@ -146,7 +146,7 @@ class ImporterRun:
         run.project = self.project()
         run.display_name = coalesce(self.display_name())
         run.notes = coalesce(self.notes(), "")
-        run.tags.extend(coalesce(self.tags(), list()))
+        run.tags.extend(coalesce(self.tags(), []))
         # run.start_time.FromMilliseconds(self.start_time())
         # run.runtime = self.runtime()
         run_group = self.run_group()
@@ -168,7 +168,7 @@ class ImporterRun:
         return self.interface._make_record(summary=summary)
 
     def _make_history_records(self) -> Iterable[pb.Record]:
-        for _, metrics in enumerate(self.metrics()):
+        for metrics in self.metrics():
             history = pb.HistoryRecord()
             for k, v in metrics.items():
                 item = history.item.add()
@@ -222,22 +222,17 @@ class ImporterRun:
     def _make_metadata_file(self, run_dir: str) -> None:
         missing_text = "MLFlow did not capture this info."
 
-        d = {}
-        if self.os_version() is not None:
-            d["os"] = self.os_version()
-        else:
-            d["os"] = missing_text
-
+        d = {
+            "os": self.os_version()
+            if self.os_version() is not None
+            else missing_text
+        }
         if self.python_version() is not None:
             d["python"] = self.python_version()
         else:
             d["python"] = missing_text
 
-        if self.program() is not None:
-            d["program"] = self.program()
-        else:
-            d["program"] = missing_text
-
+        d["program"] = self.program() if self.program() is not None else missing_text
         if self.cuda_version() is not None:
             d["cuda"] = self.cuda_version()
         if self.host() is not None:

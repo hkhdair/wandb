@@ -28,7 +28,7 @@ class SequenceItem:
 class TracelogParser:
     def __init__(self) -> None:
         self._items: List[SequenceItem] = []
-        self._uuid_messages = dict()
+        self._uuid_messages = {}
 
     def _parse(self, line: str) -> None:
         line = line.strip()
@@ -45,21 +45,19 @@ class TracelogParser:
         if magic != "TRACELOG(1)":
             return
         thr = thr.replace("-", "_")
-        if op == "queue":
-            src = thr
-            dst = resource
-        elif op == "dequeue":
+        if op == "dequeue":
             dst = thr
             src = resource
+        elif op == "queue":
+            src = thr
+            dst = resource
         else:
             # TODO: handle this
             return
-        request = True
-        if direct == "<-":
-            request = False
+        request = direct != "<-"
         ts = float(ts)
         if msg == "None":
-            msg = "return_" + self._uuid_messages.get(uuid)
+            msg = f"return_{self._uuid_messages.get(uuid)}"
         item = SequenceItem(ts=ts, src=src, request=request, dst=dst, info=msg)
         self.add(item)
 
@@ -130,16 +128,11 @@ participant SenderThread as sender
 
     def load(self, fname: str) -> None:
         with open(fname) as f:
-            for line in f.readlines():
+            for line in f:
                 self._parse(line)
 
     def loaddir(self, dname: str) -> None:
-        flist = []
-        for p in pathlib.Path(dname).iterdir():
-            if not p.is_file():
-                continue
-            flist.append(p)
-
+        flist = [p for p in pathlib.Path(dname).iterdir() if p.is_file()]
         for f in flist:
             self.load(f)
 

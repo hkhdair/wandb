@@ -115,9 +115,9 @@ def trigger(args):
         if args.test_file or args.test_repeat:
             toxcmd += " --"
         if args.test_file:
-            toxcmd += " " + args.test_file
+            toxcmd += f" {args.test_file}"
             if args.test_name:
-                toxcmd += " -k " + args.test_name
+                toxcmd += f" -k {args.test_name}"
         if args.test_repeat:
             toxcmd += f" --flake-finder --flake-runs={args.test_repeat}"
         # get last token split by hyphen as python version
@@ -140,11 +140,11 @@ def trigger(args):
             assert job, f"unknown platform: {p}"
             pshort = platforms_short_dict.get(p)
             jobname = f"{pshort}-{pyname}"
-            parameters["manual_" + job] = True
-            parameters["manual_" + job + "_name"] = jobname
+            parameters[f"manual_{job}"] = True
+            parameters[f"manual_{job}_name"] = jobname
             if job == "test":
-                parameters["manual_" + job + "_image"] = pyimage
-            parameters["manual_" + job + "_toxenv"] = toxcmd
+                parameters[f"manual_{job}_image"] = pyimage
+            parameters[f"manual_{job}_toxenv"] = toxcmd
             if args.parallelism:
                 parameters["manual_parallelism"] = args.parallelism
             if args.xdist:
@@ -215,7 +215,7 @@ def get_ci_builds(args, completed=True):
     # TODO: extend pagination if not done
     url = "https://circleci.com/api/v1.1/project/gh/wandb/wandb?shallow=true&limit=100"
     if completed:
-        url = url + "&filter=completed"
+        url += "&filter=completed"
     # print("SEND", url)
     r = requests.get(url, auth=(args.api_token, ""))
     assert r.status_code == 200, f"Error making api request: {r}"
@@ -252,11 +252,7 @@ def grab(args, vhash, bnum):
         os.mkdir(cachedir)
     if os.path.exists(cfname):
         return
-    url = (
-        "https://circleci.com/api/v1.1/project/github/wandb/wandb/{}/artifacts".format(
-            bnum
-        )
-    )
+    url = f"https://circleci.com/api/v1.1/project/github/wandb/wandb/{bnum}/artifacts"
     r = requests.get(url, auth=(args.api_token, ""))
     assert r.status_code == 200, f"Error making api request: {r}"
     lst = r.json()

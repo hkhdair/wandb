@@ -49,11 +49,7 @@ def monitor():
             import gymnasium as gym  # type: ignore
         from pkg_resources import parse_version
 
-        if parse_version(gym.__version__) < parse_version("0.26.0"):
-            _gym_version_lt_0_26 = True
-        else:
-            _gym_version_lt_0_26 = False
-
+        _gym_version_lt_0_26 = parse_version(gym.__version__) < parse_version("0.26.0")
     # breaking change in gym 0.26.0
     vcr_recorder_attribute = "ImageEncoder" if _gym_version_lt_0_26 else "VideoRecorder"
     recorder = getattr(vcr, vcr_recorder_attribute)
@@ -66,10 +62,7 @@ def monitor():
         if not self.enabled:
             return
         m = re.match(r".+(video\.\d+).+", getattr(self, path))
-        if m:
-            key = m.group(1)
-        else:
-            key = "videos"
+        key = m[1] if m else "videos"
         wandb.log({key: wandb.Video(getattr(self, path))})
 
     def del_(self):

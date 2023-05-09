@@ -61,7 +61,7 @@ def main():
 
     # Tests numpy clouds
     for i in range(0, 20, 10):
-        table.add_data("Cloud " + str(i), wandb.Object3D(wave_pattern(i)))
+        table.add_data(f"Cloud {str(i)}", wandb.Object3D(wave_pattern(i)))
         wandb.log(
             {
                 "Clouds": [
